@@ -1,0 +1,161 @@
+body, html {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-color: #111;
+    font-family: 'Helvetica', 'Arial', sans-serif;
+}
+
+.brick-wall {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center; /* Center everything vertically */
+    align-items: center;
+    background-color: #1a1a1f; 
+    background-image: 
+        repeating-linear-gradient(transparent, transparent 60px, rgba(0,0,0,0.85) 60px, rgba(0,0,0,0.85) 64px),
+        repeating-linear-gradient(90deg, transparent, transparent 120px, rgba(0,0,0,0.75) 120px, rgba(0,0,0,0.75) 124px);
+    position: relative;
+}
+
+.spotlight {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 1300px;
+    height: 1300px;
+    background: radial-gradient(circle, rgba(170, 60, 255, 0.75) 0%, rgba(120, 30, 220, 0.45) 40%, rgba(50, 0, 100, 0.1) 65%, rgba(0,0,0,0) 85%);
+    pointer-events: none;
+    z-index: 1;
+    mix-blend-mode: screen;
+}
+
+.wheel-wrapper {
+    position: relative;
+    width: min(850px, 85vmin);
+    height: min(850px, 85vmin);
+    z-index: 2;
+    filter: drop-shadow(0 0 80px rgba(150, 50, 255, 0.7)) drop-shadow(0 0 20px rgba(0,0,0,0.8));
+    animation: float 10s ease-in-out infinite;
+    margin-bottom: 40px; /* Space separating wheel from the button securely */
+}
+
+@keyframes float {
+    0% { transform: translateY(0px) rotate(0deg); }
+    50% { transform: translateY(-5px) rotate(0.2deg); }
+    100% { transform: translateY(0px) rotate(0deg); }
+}
+
+canvas {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+}
+
+.pointer {
+    position: absolute;
+    top: 50%;
+    left: -40px;
+    transform: translateY(-50%);
+    width: 70px; 
+    height: 50px; 
+    background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 70 50"><polygon points="0,5 70,25 0,45" fill="%23ffffff" stroke="%23f2c94c" stroke-width="5" stroke-linejoin="round"/></svg>') no-repeat center center;
+    z-index: 10;
+    filter: drop-shadow(5px 5px 10px rgba(0,0,0,0.9));
+}
+
+.spin-btn {
+    position: relative; /* Places button natively below the wheel within flex box */
+    padding: 15px 60px;
+    font-size: 26px;
+    font-weight: bold;
+    color: #fff;
+    background: linear-gradient(135deg, #d8b4e2 0%, #b892ff 100%);
+    border: 3px solid #fff;
+    border-radius: 50px;
+    cursor: pointer;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15), inset 0 -3px 8px rgba(0,0,0,0.1);
+    transition: all 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    z-index: 10;
+}
+
+.spin-btn:hover {
+    filter: brightness(1.1);
+    transform: translateY(-2px);
+    box-shadow: 0 15px 40px rgba(184, 146, 255, 0.4), inset 0 -3px 8px rgba(0,0,0,0.1);
+}
+
+.spin-btn:active {
+    transform: translateY(4px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2), inset 0 -1px 3px rgba(0,0,0,0.1);
+}
+
+/* POPUP styles */
+.popup-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+    background: rgba(0,0,0,0);
+    transition: background 0.4s ease;
+    backdrop-filter: blur(0px);
+}
+
+.popup-overlay.active {
+    background: rgba(0,0,0,0.8);
+    backdrop-filter: blur(8px);
+    pointer-events: all;
+}
+
+.popup {
+    background: linear-gradient(135deg, #ffffff, #f0f0f5);
+    border: 6px solid #b892ff;
+    border-radius: 20px;
+    padding: 50px 80px;
+    color: #333;
+    text-align: center;
+    font-size: 70px;
+    font-weight: 800;
+    text-transform: uppercase;
+    box-shadow: 0 0 50px rgba(184, 146, 255, 0.4), 0 30px 60px rgba(0,0,0,0.5);
+    transform: scale(0.5) translateY(50px);
+    opacity: 0;
+    transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.4s;
+}
+
+.popup.show {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+}
+
+.popup-header {
+    display: block;
+    font-size: 26px;
+    color: #b892ff;
+    margin-bottom: 20px;
+    letter-spacing: 4px;
+}
+
+#popupText {
+    background: linear-gradient(to right, #b892ff, #f1c0e8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 10px rgba(184, 146, 255, 0.3));
+}
+
+@media (max-width: 900px) {
+    .popup {
+        padding: 30px 40px;
+        font-size: 40px;
+    }
+}
