@@ -3,26 +3,111 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Riff Off Wheel</title>
+    <title>BEAM × UMN A Cappella — Riff Off</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;700;800;900&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="brick-wall">
-        <div class="spotlight"></div>
-        <div class="wheel-wrapper">
-            <canvas id="wheelCanvas"></canvas>
-            <div class="pointer"></div>
+
+    <!-- ====== SCREEN 1: TITLE ====== -->
+    <div class="screen active" id="screen-title">
+        <div class="title-bg">
+            <div class="sparkle-field" id="sparkleField"></div>
+            <div class="title-content">
+                <div class="title-org animate-in">BEAM <span class="title-star">★</span> UMN A CAPPELLA</div>
+                <div class="title-main animate-in delay-1">RIFF OFF</div>
+                <div class="title-details animate-in delay-2">
+                    <div class="title-detail-col">
+                        <span class="detail-small">FEATURING</span>
+                        <div class="groups-flex">
+                            <span class="detail-big">VOCAL U</span>
+                            <span class="detail-big">7 DAYS</span>
+                            <span class="detail-big">BASSES WILD</span>
+                            <span class="detail-big">THE ENCHANTMENTS</span>
+                            <span class="detail-big">URBAN SOUND</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="title-badges animate-in delay-3">
+                    <div class="badge">VOTE FOR THE BEST!</div>
+                    <div class="badge">BAKE SALE IN LOBBY</div>
+                </div>
+                <div class="press-prompt animate-in delay-4">Press <kbd>SPACE</kbd> to begin</div>
+            </div>
         </div>
-        <button id="spinBtn" class="spin-btn">SPIN THE WHEEL</button>
     </div>
-    
-    <div class="popup-overlay" id="popupOverlay">
-        <div class="popup" id="popupObj">
-            <div class="popup-header">Selected Category</div>
-            <div id="popupText">Pop Princess</div>
+
+    <!-- ====== SCREEN 2: WHEEL ====== -->
+    <div class="screen" id="screen-wheel">
+        <div class="brick-wall">
+            <div class="spotlight"></div>
+            <div class="round-indicator" id="roundIndicator">ROUND 1</div>
+            <div class="wheel-wrapper">
+                <canvas id="wheelCanvas"></canvas>
+                <div class="pointer"></div>
+            </div>
+        </div>
+
+        <div class="popup-overlay" id="popupOverlay">
+            <div class="popup" id="popupObj">
+                <div class="popup-header">Selected Category</div>
+                <div id="popupText">Pop Princess</div>
+
+            </div>
         </div>
     </div>
-    
+
+    <!-- ====== SCREEN 3: TEAM DISPLAY ====== -->
+    <div class="screen" id="screen-team">
+        <div class="team-display-bg">
+            <div class="team-name" id="teamName">VOCAL U</div>
+            <div class="team-prompt">Press <kbd>SPACE</kbd> to open voting</div>
+        </div>
+    </div>
+
+    <!-- ====== SCREEN 4: VOTING QR ====== -->
+    <div class="screen" id="screen-vote">
+        <div class="vote-screen">
+            <div class="vote-card">
+                <div class="vote-info">
+                    <div class="vote-round-label" id="voteRoundLabel">ROUND 1</div>
+                    <div class="vote-team-label" id="voteTeamLabel">VOCAL U</div>
+                    <div class="vote-header">VOTING OPEN</div>
+                    <div class="vote-categories">
+                        <div class="vote-cat">🎵 Enjoyability <span>1–10</span></div>
+                        <div class="vote-cat">🎤 Vocal Quality <span>1–10</span></div>
+                        <div class="vote-cat">🎭 Performance <span>1–10</span></div>
+                    </div>
+                </div>
+                <div class="qr-wrapper">
+                    <div class="qr-container">
+                        <img id="qrImage" src="" alt="Vote QR Code" />
+                    </div>
+                    <div class="qr-caption">SCAN TO SCORE</div>
+                </div>
+            </div>
+            <div class="vote-prompt">Press team key for next group · <kbd>ESC</kbd> for scores</div>
+        </div>
+    </div>
+
+    <!-- ====== SCREEN 5: SCORES ====== -->
+    <div class="screen" id="screen-scores">
+        <div class="scores-screen">
+            <div class="scores-title">SCOREBOARD</div>
+            <div class="scores-grid" id="scoresGrid"></div>
+            <div class="scores-prompt">Press <kbd>SPACE</kbd> to continue · Click cells to edit scores</div>
+        </div>
+    </div>
+
+    <!-- ====== SCREEN 6: ROUND TRANSITION ====== -->
+    <div class="screen" id="screen-round-transition">
+        <div class="round-transition-bg">
+            <div class="round-transition-text" id="roundTransitionText">ROUND 2</div>
+            <div class="round-transition-prompt">Press <kbd>SPACE</kbd> to spin</div>
+        </div>
+    </div>
+
     <script src="script.js"></script>
 </body>
 </html>

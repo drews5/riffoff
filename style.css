@@ -1,19 +1,227 @@
+/* ============================
+   BASE RESET & GLOBALS
+   ============================ */
 body, html {
     margin: 0;
     padding: 0;
     width: 100%;
     height: 100%;
     overflow: hidden;
-    background-color: #111;
-    font-family: 'Helvetica', 'Arial', sans-serif;
+    background-color: #000;
+    font-family: 'Inter', 'Helvetica', 'Arial', sans-serif;
+    color: #fff;
 }
 
+/* ============================
+   SCREEN SYSTEM
+   ============================ */
+.screen {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw;
+    height: 100vh;
+    display: none;
+    z-index: 1;
+    background: #000;
+}
+.screen.active {
+    display: flex;
+    z-index: 10;
+}
+
+/* ============================
+   SCREEN 1: TITLE
+   ============================ */
+.title-bg {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(145deg, #7b2d8e 0%, #9b3fb5 30%, #a855a0 60%, #7b2d8e 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Grainy texture overlay */
+.title-bg::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.15'/%3E%3C/svg%3E");
+    opacity: 0.4;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.sparkle-field {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.sparkle {
+    position: absolute;
+    color: #fff;
+    font-size: 18px;
+    opacity: 0;
+    animation: sparkle-anim 3s ease-in-out infinite;
+    text-shadow: 0 0 8px rgba(255,255,255,0.8);
+}
+
+@keyframes sparkle-anim {
+    0%, 100% { opacity: 0; transform: scale(0.5) rotate(0deg); }
+    50% { opacity: 1; transform: scale(1.2) rotate(180deg); }
+}
+
+.title-content {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+.title-org {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(28px, 4vw, 48px);
+    letter-spacing: 6px;
+    color: #f5e6d3;
+    text-shadow: 2px 2px 0 rgba(0,0,0,0.3);
+}
+
+.title-star {
+    margin: 0 10px;
+    color: #f5e6d3;
+}
+
+.title-main {
+    font-family: 'Playfair Display', serif;
+    font-weight: 900;
+    font-size: clamp(80px, 14vw, 200px);
+    line-height: 0.9;
+    letter-spacing: -2px;
+    color: #f5e6d3;
+    text-shadow: 4px 4px 0 rgba(0,0,0,0.25), 0 0 60px rgba(255,200,255,0.3);
+    animation: title-glow 4s ease-in-out infinite alternate;
+}
+
+@keyframes title-glow {
+    0% { text-shadow: 4px 4px 0 rgba(0,0,0,0.25), 0 0 40px rgba(255,200,255,0.2); }
+    100% { text-shadow: 4px 4px 0 rgba(0,0,0,0.25), 0 0 80px rgba(255,200,255,0.5); }
+}
+
+.title-details {
+    display: flex;
+    gap: 60px;
+    margin-top: 30px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.title-detail-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.detail-big {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(22px, 3vw, 36px);
+    letter-spacing: 2px;
+    color: #f5e6d3;
+}
+
+.detail-small {
+    font-size: clamp(11px, 1.2vw, 15px);
+    color: rgba(245,230,211,0.7);
+    letter-spacing: 2px;
+    margin-top: 4px;
+}
+
+.groups-flex {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 30px;
+    justify-content: center;
+    margin-top: 15px;
+    margin-bottom: 20px;
+}
+
+.title-badges {
+    display: flex;
+    gap: 30px;
+    margin-top: 20px;
+}
+
+.badge {
+    background: #1a1a1a;
+    color: #f5e6d3;
+    font-weight: 800;
+    font-size: clamp(12px, 1.5vw, 16px);
+    padding: 12px 24px;
+    border-radius: 50px;
+    letter-spacing: 1px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    animation: badge-pulse 3s ease-in-out infinite;
+}
+
+@keyframes badge-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+.press-prompt {
+    margin-top: 40px;
+    font-size: 16px;
+    color: rgba(245,230,211,0.6);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    animation: prompt-fade 2s ease-in-out infinite;
+}
+
+@keyframes prompt-fade {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+}
+
+kbd {
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-family: 'Inter', monospace;
+    font-size: inherit;
+}
+
+/* Animate-in classes */
+.animate-in {
+    opacity: 0;
+    transform: translateY(30px);
+    animation: fade-up 0.8s ease forwards;
+}
+.delay-1 { animation-delay: 0.3s; }
+.delay-2 { animation-delay: 0.6s; }
+.delay-3 { animation-delay: 0.9s; }
+.delay-4 { animation-delay: 1.2s; }
+
+@keyframes fade-up {
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================
+   SCREEN 2: WHEEL
+   ============================ */
 .brick-wall {
     width: 100vw;
     height: 100vh;
     display: flex;
     flex-direction: column;
-    justify-content: center; /* Center everything vertically */
+    justify-content: center;
     align-items: center;
     background-color: #1a1a1f; 
     background-image: 
@@ -35,14 +243,26 @@ body, html {
     mix-blend-mode: screen;
 }
 
+.round-indicator {
+    position: absolute;
+    top: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 36px;
+    letter-spacing: 6px;
+    color: rgba(255,255,255,0.6);
+    z-index: 5;
+}
+
 .wheel-wrapper {
     position: relative;
-    width: min(850px, 85vmin);
-    height: min(850px, 85vmin);
+    width: min(750px, 75vmin);
+    height: min(750px, 75vmin);
     z-index: 2;
     filter: drop-shadow(0 0 80px rgba(150, 50, 255, 0.7)) drop-shadow(0 0 20px rgba(0,0,0,0.8));
     animation: float 10s ease-in-out infinite;
-    margin-bottom: 40px; /* Space separating wheel from the button securely */
+    margin-bottom: 30px;
 }
 
 @keyframes float {
@@ -51,7 +271,7 @@ body, html {
     100% { transform: translateY(0px) rotate(0deg); }
 }
 
-canvas {
+canvas#wheelCanvas {
     width: 100%;
     height: 100%;
     border-radius: 50%;
@@ -69,33 +289,7 @@ canvas {
     filter: drop-shadow(5px 5px 10px rgba(0,0,0,0.9));
 }
 
-.spin-btn {
-    position: relative; /* Places button natively below the wheel within flex box */
-    padding: 15px 60px;
-    font-size: 26px;
-    font-weight: bold;
-    color: #fff;
-    background: linear-gradient(135deg, #d8b4e2 0%, #b892ff 100%);
-    border: 3px solid #fff;
-    border-radius: 50px;
-    cursor: pointer;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.15), inset 0 -3px 8px rgba(0,0,0,0.1);
-    transition: all 0.2s;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    z-index: 10;
-}
 
-.spin-btn:hover {
-    filter: brightness(1.1);
-    transform: translateY(-2px);
-    box-shadow: 0 15px 40px rgba(184, 146, 255, 0.4), inset 0 -3px 8px rgba(0,0,0,0.1);
-}
-
-.spin-btn:active {
-    transform: translateY(4px);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2), inset 0 -1px 3px rgba(0,0,0,0.1);
-}
 
 /* POPUP styles */
 .popup-overlay {
@@ -124,7 +318,7 @@ canvas {
     padding: 50px 80px;
     color: #333;
     text-align: center;
-    font-size: 70px;
+    font-size: 60px;
     font-weight: 800;
     text-transform: uppercase;
     box-shadow: 0 0 50px rgba(184, 146, 255, 0.4), 0 30px 60px rgba(0,0,0,0.5);
@@ -140,7 +334,7 @@ canvas {
 
 .popup-header {
     display: block;
-    font-size: 26px;
+    font-size: 22px;
     color: #b892ff;
     margin-bottom: 20px;
     letter-spacing: 4px;
@@ -153,9 +347,375 @@ canvas {
     filter: drop-shadow(0 0 10px rgba(184, 146, 255, 0.3));
 }
 
+
+
+/* ============================
+   SCREEN 3: TEAM DISPLAY
+   ============================ */
+.team-display-bg {
+    width: 100%;
+    height: 100%;
+    background: #000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding-top: 10vh;
+    position: relative;
+    overflow: hidden;
+}
+
+.team-display-bg::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 40%;
+    background: linear-gradient(to top, rgba(120,40,180,0.08) 0%, transparent 100%);
+    pointer-events: none;
+}
+
+.team-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(80px, 14vw, 180px);
+    letter-spacing: 8px;
+    color: #fff;
+    text-align: center;
+    text-shadow: 0 0 60px rgba(184,146,255,0.3);
+    animation: team-name-enter 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    opacity: 0;
+}
+
+@keyframes team-name-enter {
+    0% { opacity: 0; transform: scale(0.7) translateY(40px); letter-spacing: 30px; }
+    100% { opacity: 1; transform: scale(1) translateY(0); letter-spacing: 8px; }
+}
+
+.team-prompt {
+    position: absolute;
+    bottom: 60px;
+    font-size: 16px;
+    color: rgba(255,255,255,0.4);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    animation: prompt-fade 2s ease-in-out infinite;
+}
+
+/* ============================
+   SCREEN 4: VOTING QR
+   ============================ */
+.vote-screen {
+    width: 100%;
+    height: 100%;
+    background: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E"), radial-gradient(circle at 50% 50%, #3a1548 0%, #120521 60%, #000000 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.vote-card {
+    display: flex;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(184, 146, 255, 0.15);
+    backdrop-filter: blur(40px);
+    border-radius: 40px;
+    padding: 60px 100px;
+    box-shadow: 0 40px 100px rgba(0, 0, 0, 0.8), inset 0 0 40px rgba(184, 146, 255, 0.05);
+    gap: 100px;
+    align-items: center;
+    animation: fade-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.vote-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.vote-round-label {
+    font-size: 20px;
+    color: rgba(255,255,255,0.4);
+    letter-spacing: 6px;
+    margin-bottom: 5px;
+    font-family: 'Bebas Neue', sans-serif;
+}
+
+.vote-team-label {
+    font-family: 'Inter', sans-serif;
+    font-size: clamp(30px, 4vw, 50px);
+    font-weight: 900;
+    color: #fff;
+    letter-spacing: 2px;
+    margin-bottom: 25px;
+    text-shadow: 0 0 30px rgba(184,146,255,0.3);
+}
+
+.vote-header {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(40px, 5vw, 60px);
+    letter-spacing: 12px;
+    color: #b892ff;
+    margin-bottom: 30px;
+}
+
+.vote-categories {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.vote-cat {
+    background: rgba(184,146,255,0.05);
+    border-left: 3px solid #b892ff;
+    padding: 12px 20px;
+    font-size: 18px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.9);
+    letter-spacing: 1.5px;
+}
+
+.vote-cat span {
+    color: #b892ff;
+    font-weight: 800;
+    margin-left: 10px;
+}
+
+.qr-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+.qr-container {
+    background: #fff;
+    padding: 20px;
+    border-radius: 20px;
+    box-shadow: 0 0 60px rgba(184,146,255,0.2), 0 20px 40px rgba(0,0,0,0.5);
+    transition: transform 0.3s ease;
+}
+
+.qr-container:hover {
+    transform: scale(1.05);
+}
+
+.qr-container img {
+    display: block;
+    width: 250px;
+    height: 250px;
+    border-radius: 8px;
+}
+
+.qr-caption {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 24px;
+    letter-spacing: 6px;
+    color: #f5e6d3;
+}
+
+.vote-prompt {
+    position: absolute;
+    bottom: 40px;
+    font-size: 14px;
+    color: rgba(255,255,255,0.35);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    animation: prompt-fade 2s ease-in-out infinite;
+}
+
+/* ============================
+   SCREEN 5: SCORES
+   ============================ */
+.scores-screen {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(165deg, #0a0a0f 0%, #12121f 40%, #1a1025 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 40px 30px;
+    overflow-y: auto;
+    box-sizing: border-box;
+}
+
+.scores-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(48px, 6vw, 72px);
+    letter-spacing: 10px;
+    color: #b892ff;
+    text-shadow: 0 0 40px rgba(184,146,255,0.4);
+    margin-bottom: 30px;
+    flex-shrink: 0;
+}
+
+.scores-grid {
+    width: 100%;
+    max-width: 1100px;
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+    flex-shrink: 0;
+}
+
+.round-scores-block {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(184,146,255,0.15);
+    border-radius: 16px;
+    padding: 24px;
+    overflow-x: auto;
+}
+
+.round-scores-block h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    letter-spacing: 4px;
+    color: rgba(255,255,255,0.6);
+    margin: 0 0 16px 0;
+}
+
+.scores-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 15px;
+}
+
+.scores-table th {
+    text-align: left;
+    color: #b892ff;
+    font-weight: 700;
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(184,146,255,0.2);
+    letter-spacing: 1px;
+    font-size: 13px;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.scores-table td {
+    padding: 10px 14px;
+    color: rgba(255,255,255,0.8);
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    white-space: nowrap;
+}
+
+.scores-table td:first-child {
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: 1px;
+}
+
+.scores-table input {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(184,146,255,0.2);
+    border-radius: 6px;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    width: 50px;
+    padding: 6px 10px;
+    text-align: center;
+    font-family: 'Inter', sans-serif;
+    transition: border-color 0.2s;
+}
+
+.scores-table input:focus {
+    outline: none;
+    border-color: #b892ff;
+    background: rgba(184,146,255,0.1);
+}
+
+.scores-table .total-cell {
+    color: #b892ff;
+    font-weight: 800;
+    font-size: 16px;
+}
+
+.scores-prompt {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 14px;
+    color: rgba(255,255,255,0.35);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    animation: prompt-fade 2s ease-in-out infinite;
+    z-index: 20;
+}
+
+/* ============================
+   SCREEN 6: ROUND TRANSITION
+   ============================ */
+.round-transition-bg {
+    width: 100%;
+    height: 100%;
+    background: #000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.round-transition-text {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(100px, 18vw, 260px);
+    letter-spacing: 20px;
+    color: #fff;
+    text-shadow: 0 0 40px rgba(184,146,255,0.4);
+    animation: round-enter 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    opacity: 0;
+}
+
+@keyframes round-enter {
+    0% { opacity: 0; transform: scale(1.1) translateY(20px); filter: blur(10px); }
+    100% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0px); }
+}
+
+.round-transition-prompt {
+    position: absolute;
+    bottom: 60px;
+    font-size: 16px;
+    color: rgba(255,255,255,0.4);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    animation: prompt-fade 2s ease-in-out infinite;
+}
+
+/* ============================
+   PAGE TRANSITION
+   ============================ */
+.screen.fade-out {
+    animation: screen-fade-out 0.4s ease forwards;
+}
+
+.screen.fade-in {
+    animation: screen-fade-in 0.5s ease forwards;
+}
+
+@keyframes screen-fade-out {
+    to { opacity: 0; }
+}
+
+@keyframes screen-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* ============================
+   RESPONSIVE
+   ============================ */
 @media (max-width: 900px) {
     .popup {
         padding: 30px 40px;
         font-size: 40px;
     }
+    .title-details { gap: 30px; }
+    .vote-categories { gap: 15px; }
+    .scores-table { font-size: 13px; }
+    .scores-table input { width: 40px; padding: 4px 6px; font-size: 13px; }
 }

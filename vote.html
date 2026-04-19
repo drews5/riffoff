@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vote — Riff Off</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(165deg, #0a0a0f 0%, #12121f 40%, #1a1025 100%);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 30px 20px;
+        }
+        h1 {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 48px;
+            letter-spacing: 6px;
+            color: #b892ff;
+            text-shadow: 0 0 30px rgba(184,146,255,0.3);
+        }
+        .team-name select {
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: 3px;
+            margin: 8px 0;
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            border: 2px solid #b892ff;
+            border-radius: 8px;
+            padding: 8px;
+            font-family: 'Inter', sans-serif;
+            width: 100%;
+            max-width: 400px;
+        }
+        .round-label select {
+            font-size: 16px;
+            color: #fff;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(184,146,255,0.6);
+            border-radius: 6px;
+            padding: 4px 8px;
+            letter-spacing: 3px;
+            margin-bottom: 30px;
+            font-family: 'Inter', sans-serif;
+        }
+        .vote-form {
+            width: 100%;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+        .vote-category {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(184,146,255,0.2);
+            border-radius: 14px;
+            padding: 20px;
+        }
+        .vote-category label {
+            display: block;
+            font-weight: 700;
+            font-size: 16px;
+            margin-bottom: 14px;
+            letter-spacing: 1px;
+        }
+        .vote-category label span {
+            color: #b892ff;
+        }
+        .slider-row {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .slider-row input[type="range"] {
+            flex: 1;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 8px;
+            border-radius: 4px;
+            background: rgba(184,146,255,0.2);
+            outline: none;
+        }
+        .slider-row input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: #b892ff;
+            cursor: pointer;
+            box-shadow: 0 0 12px rgba(184,146,255,0.5);
+        }
+        .slider-val {
+            font-weight: 800;
+            font-size: 24px;
+            color: #b892ff;
+            min-width: 30px;
+            text-align: center;
+        }
+        .submit-btn {
+            width: 100%;
+            padding: 16px;
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 28px;
+            letter-spacing: 4px;
+            color: #fff;
+            background: linear-gradient(135deg, #9b3fb5, #b892ff);
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 8px 30px rgba(184,146,255,0.3);
+            transition: all 0.2s;
+        }
+        .submit-btn:hover { transform: translateY(-2px); filter: brightness(1.1); }
+        .submit-btn:active { transform: translateY(2px); }
+        .success-msg {
+            display: none;
+            text-align: center;
+            padding: 40px 20px;
+        }
+        .success-msg.show { display: block; }
+        .success-msg h2 {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 48px;
+            letter-spacing: 4px;
+            color: #b892ff;
+            margin-bottom: 10px;
+        }
+        .success-msg p { color: rgba(255,255,255,0.6); font-size: 16px; }
+    </style>
+</head>
+<body>
+    <h1>VOTE</h1>
+    <div class="team-name">
+        <select id="teamNameSelect">
+            <option value="VOCAL U">VOCAL U</option>
+            <option value="7 DAYS">7 DAYS</option>
+            <option value="BASSES WILD">BASSES WILD</option>
+            <option value="THE ENCHANTMENTS">THE ENCHANTMENTS</option>
+            <option value="URBAN SOUND">URBAN SOUND</option>
+        </select>
+    </div>
+    <div class="round-label">
+        <select id="roundSelect">
+            <option value="1">ROUND 1</option>
+            <option value="2">ROUND 2</option>
+            <option value="3">ROUND 3</option>
+        </select>
+    </div>
+
+    <form class="vote-form" id="voteForm">
+        <div class="vote-category">
+            <label>🎵 Enjoyability <span>(1–10)</span></label>
+            <div class="slider-row">
+                <input type="range" min="1" max="10" value="5" id="enjoyability" oninput="document.getElementById('ej-val').textContent=this.value">
+                <div class="slider-val" id="ej-val">5</div>
+            </div>
+        </div>
+
+        <div class="vote-category">
+            <label>🎤 Vocal Quality <span>(1–10)</span></label>
+            <div class="slider-row">
+                <input type="range" min="1" max="10" value="5" id="vocalQuality" oninput="document.getElementById('vq-val').textContent=this.value">
+                <div class="slider-val" id="vq-val">5</div>
+            </div>
+        </div>
+
+        <div class="vote-category">
+            <label>🎭 Performance Quality <span>(1–10)</span></label>
+            <div class="slider-row">
+                <input type="range" min="1" max="10" value="5" id="performanceQuality" oninput="document.getElementById('pq-val').textContent=this.value">
+                <div class="slider-val" id="pq-val">5</div>
+            </div>
+        </div>
+
+        <button type="submit" class="submit-btn">SUBMIT VOTE</button>
+    </form>
+
+    <div class="success-msg" id="successMsg">
+        <h2>VOTE SUBMITTED!</h2>
+        <p>Thank you for voting. Your scores have been recorded.</p>
+    </div>
+
+    <script>
+        // Parse URL params just in case they are eventually passed, else set defaults
+        const params = new URLSearchParams(window.location.search);
+        let defaultTeam = params.get('team') || 'VOCAL U';
+        let defaultRound = params.get('round') || '1';
+
+        document.getElementById('teamNameSelect').value = defaultTeam;
+        document.getElementById('roundSelect').value = defaultRound;
+
+        document.getElementById('voteForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const vote = {
+                team: document.getElementById('teamNameSelect').value,
+                round: parseInt(document.getElementById('roundSelect').value),
+                enjoyability: parseInt(document.getElementById('enjoyability').value),
+                vocalQuality: parseInt(document.getElementById('vocalQuality').value),
+                performanceQuality: parseInt(document.getElementById('performanceQuality').value),
+                timestamp: Date.now()
+            };
+            
+            // Store in localStorage
+            let votes = JSON.parse(localStorage.getItem('riffoff-votes') || '[]');
+            votes.push(vote);
+            localStorage.setItem('riffoff-votes', JSON.stringify(votes));
+            
+            // Show success
+            document.getElementById('voteForm').style.display = 'none';
+            document.getElementById('successMsg').classList.add('show');
+        });
+    </script>
+</body>
+</html>
