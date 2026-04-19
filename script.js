@@ -9,6 +9,25 @@
    → (Esc at any time) → SCORES
    ================================================ */
 
+// ==================== LIVE SYNC ====================
+// Fill these in to enable Live Dynamic Updating on audience phones
+const SUPABASE_URL = "";
+const SUPABASE_ANON_KEY = "";
+let supabaseClient = null;
+
+if (SUPABASE_URL && SUPABASE_ANON_KEY && typeof window.supabase !== 'undefined') {
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+}
+
+async function updateLiveState(teamName, round, isOpen) {
+    if (!supabaseClient) return;
+    try {
+        await supabaseClient.from('live_state').upsert({ id: 1, team: teamName, round: round, is_open: isOpen });
+    } catch (e) {
+        console.error("Live sync failed", e);
+    }
+}
+
 // ==================== STATE ====================
 const TEAMS = {
     'v': 'VOCAL U',
@@ -451,6 +470,7 @@ function showVoteScreen() {
     generateVoteQR(teamName, currentRound);
     showScreen('vote');
     performedTeams.add(currentTeamKey);
+    updateLiveState(teamName, currentRound, true);
 }
 
 function showRoundTransition() {
@@ -524,6 +544,7 @@ document.addEventListener('keydown', (e) => {
             if (TEAM_KEYS.includes(key)) {
                 // Determine if we are moving to next team or if this was just a mispress fixing
                 if (performedTeams.size < 5) {
+                    updateLiveState("", currentRound, false);
                     showTeam(key);
                 }
             }
@@ -531,11 +552,13 @@ document.addEventListener('keydown', (e) => {
                 e.preventDefault();
                 // Only move to round transition if all 5 teams have voted
                 if (performedTeams.size >= 5) {
+                    updateLiveState("", currentRound, false);
                     showRoundTransition();
                 }
             }
             if (key === 'escape') {
                 previousScreen = 'vote';
+                updateLiveState("", currentRound, false);
                 renderScores();
                 showScreen('scores');
             }
@@ -546,6 +569,10 @@ document.addEventListener('keydown', (e) => {
                 e.preventDefault();
                 // Return to previous context
                 if (previousScreen) {
+                    // Restore live state if returning to vote
+                    if (previousScreen === 'vote') {
+                        updateLiveState(TEAMS[currentTeamKey], currentRound, true);
+                    }
                     // If we completed a round, go to round transition
                     if (performedTeams.size >= 5) {
                         showRoundTransition();
