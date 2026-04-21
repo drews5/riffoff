@@ -19,10 +19,16 @@ if (SUPABASE_URL && SUPABASE_ANON_KEY && typeof window.supabase !== 'undefined')
     supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 }
 
-async function updateLiveState(teamName, round, isOpen) {
+async function updateLiveState(teamName, round, isOpen, extraState = {}) {
     if (!supabaseClient) return;
     try {
-        await supabaseClient.from('live_state').upsert({ id: 1, team: teamName, round: round, is_open: isOpen });
+        await supabaseClient.from('live_state').upsert({
+            id: 1,
+            team: teamName,
+            round: round,
+            is_open: isOpen,
+            ...extraState
+        });
     } catch (e) {
         console.error("Live sync failed", e);
     }
@@ -48,6 +54,7 @@ let currentTeamKey = null;
 let previousScreen = null; // for returning from scores
 let isSpinning = false;
 let wheelHasSpun = false; // track if wheel was spun this round
+let currentCategory = "Pop Princess Category";
 
 // Scores: { teamName: { round: { enjoyability: n, vocalQuality: n, performanceQuality: n } } }
 let scores = {};
@@ -360,6 +367,7 @@ function spinWheel() {
             isSpinning = false;
             wheelHasSpun = true;
             currentRotation = nowRotation;
+            currentCategory = `${targetText} Category`;
             
             const overlay = document.getElementById('popupOverlay');
             const popup = document.getElementById('popupObj');
@@ -459,6 +467,12 @@ function showTeam(teamKey) {
     currentTeamKey = teamKey;
     const teamName = TEAMS[teamKey];
     document.getElementById('teamName').textContent = teamName;
+    const phase = performedTeams.size === 0 ? 'before' : 'between';
+    updateLiveState(teamName, currentRound, false, {
+        phase,
+        category: currentCategory,
+        event_complete: false
+    });
     showScreen('team');
 }
 
@@ -470,17 +484,31 @@ function showVoteScreen() {
     generateVoteQR(teamName, currentRound);
     showScreen('vote');
     performedTeams.add(currentTeamKey);
-    updateLiveState(teamName, currentRound, true);
+    updateLiveState(teamName, currentRound, true, {
+        phase: 'open',
+        category: currentCategory,
+        event_complete: false
+    });
 }
 
 function showRoundTransition() {
     currentRound++;
     if (currentRound > maxRounds) {
         // Show final scores
+        updateLiveState("", maxRounds, false, {
+            phase: 'complete',
+            category: currentCategory,
+            event_complete: true
+        });
         renderScores();
         showScreen('scores');
         return;
     }
+    updateLiveState("", currentRound, false, {
+        phase: 'between',
+        category: currentCategory,
+        event_complete: false
+    });
     document.getElementById('roundTransitionText').textContent = `ROUND ${currentRound}`;
     showScreen('round-transition');
     performedTeams.clear();
@@ -544,7 +572,6 @@ document.addEventListener('keydown', (e) => {
             if (TEAM_KEYS.includes(key)) {
                 // Determine if we are moving to next team or if this was just a mispress fixing
                 if (performedTeams.size < 5) {
-                    updateLiveState("", currentRound, false);
                     showTeam(key);
                 }
             }
@@ -552,13 +579,16 @@ document.addEventListener('keydown', (e) => {
                 e.preventDefault();
                 // Only move to round transition if all 5 teams have voted
                 if (performedTeams.size >= 5) {
-                    updateLiveState("", currentRound, false);
                     showRoundTransition();
                 }
             }
             if (key === 'escape') {
                 previousScreen = 'vote';
-                updateLiveState("", currentRound, false);
+                updateLiveState("", currentRound, false, {
+                    phase: 'between',
+                    category: currentCategory,
+                    event_complete: false
+                });
                 renderScores();
                 showScreen('scores');
             }
@@ -571,7 +601,11 @@ document.addEventListener('keydown', (e) => {
                 if (previousScreen) {
                     // Restore live state if returning to vote
                     if (previousScreen === 'vote') {
-                        updateLiveState(TEAMS[currentTeamKey], currentRound, true);
+                        updateLiveState(TEAMS[currentTeamKey], currentRound, true, {
+                            phase: 'open',
+                            category: currentCategory,
+                            event_complete: false
+                        });
                     }
                     // If we completed a round, go to round transition
                     if (performedTeams.size >= 5) {
@@ -608,4 +642,9 @@ document.getElementById('popupOverlay').addEventListener('click', () => {
 document.addEventListener('DOMContentLoaded', () => {
     createSparkles();
     showScreen('title');
+    updateLiveState("", currentRound, false, {
+        phase: 'before',
+        category: currentCategory,
+        event_complete: false
+    });
 });
