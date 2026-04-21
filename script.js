@@ -481,6 +481,10 @@ function showVoteScreen() {
     const teamName = TEAMS[currentTeamKey];
     document.getElementById('voteTeamLabel').textContent = teamName;
     document.getElementById('voteRoundLabel').textContent = `ROUND ${currentRound}`;
+    const voteCategoryLabel = document.getElementById('voteCategoryLabel');
+    if (voteCategoryLabel) {
+        voteCategoryLabel.textContent = currentCategory.toUpperCase();
+    }
     generateVoteQR(teamName, currentRound);
     showScreen('vote');
     performedTeams.add(currentTeamKey);

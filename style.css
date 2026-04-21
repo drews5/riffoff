@@ -400,124 +400,309 @@ canvas#wheelCanvas {
 .vote-screen {
     width: 100%;
     height: 100%;
-    background: linear-gradient(145deg, #7b2d8e 0%, #9b3fb5 30%, #a855a0 60%, #7b2d8e 100%);
+    background:
+        radial-gradient(circle at top left, rgba(203, 181, 242, 0.5), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(195, 146, 231, 0.28), transparent 26%),
+        linear-gradient(180deg, #f7f2ee 0%, #fbfaf8 100%);
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
     position: relative;
+    overflow: hidden;
 }
 
 .vote-screen::before {
     content: '';
     position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.15'/%3E%3C/svg%3E");
-    opacity: 0.4;
+    inset: 0;
+    background:
+        radial-gradient(circle at 18% 16%, rgba(226, 210, 248, 0.72), transparent 12%),
+        radial-gradient(circle at 88% 14%, rgba(237, 229, 249, 0.92), transparent 12%),
+        radial-gradient(circle at 82% 80%, rgba(218, 194, 247, 0.6), transparent 16%);
     pointer-events: none;
     z-index: 0;
 }
 
 .vote-card {
     display: flex;
-    background: rgba(0, 0, 0, 0.2);
-    border: 2px solid rgba(255, 255, 255, 0.15);
-    backdrop-filter: blur(10px);
-    border-radius: 40px;
-    padding: 60px 100px;
-    box-shadow: 0 40px 100px rgba(0, 0, 0, 0.5), inset 0 0 40px rgba(255, 255, 255, 0.1);
-    gap: 100px;
-    align-items: center;
+    width: min(1360px, calc(100vw - 100px));
+    min-height: min(760px, calc(100vh - 80px));
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(18px);
+    border-radius: 44px;
+    padding: 54px 58px;
+    box-shadow: 0 28px 80px rgba(66, 39, 110, 0.14);
+    gap: 44px;
+    align-items: stretch;
     animation: fade-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     z-index: 2;
 }
 
-.vote-info {
+.vote-copy-column,
+.vote-qr-column {
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
+    position: relative;
     z-index: 2;
 }
 
+.vote-copy-column {
+    flex: 1.2;
+}
+
+.vote-qr-column {
+    flex: 0.9;
+    justify-content: center;
+}
+
+.vote-brand {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    margin-bottom: 28px;
+}
+
+.vote-brand-mark {
+    width: 76px;
+    height: 58px;
+    color: #6f36b3;
+}
+
+.vote-brand-mark svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.vote-brand-kicker {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: #6f36b3;
+}
+
+.vote-brand-title {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 60px;
+    font-weight: 800;
+    line-height: 0.92;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #211f54;
+}
+
+.vote-copy-block {
+    max-width: 620px;
+    margin-bottom: 34px;
+}
+
 .vote-round-label {
-    font-size: 20px;
-    color: rgba(255,255,255,0.4);
-    letter-spacing: 6px;
-    margin-bottom: 5px;
-    font-family: 'Bebas Neue', sans-serif;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 36px;
+    padding: 8px 16px;
+    border-radius: 999px;
+    background: rgba(111, 54, 179, 0.08);
+    color: #6f36b3;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+}
+
+.vote-category-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 46px;
+    padding: 10px 22px;
+    border: 1px solid rgba(111, 54, 179, 0.26);
+    border-radius: 999px;
+    background: rgba(242, 235, 251, 0.92);
+    color: #6f36b3;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    margin-bottom: 22px;
+}
+
+.vote-overline {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 28px;
+    color: #4f4a79;
+    margin-bottom: 10px;
 }
 
 .vote-team-label {
-    font-family: 'Inter', sans-serif;
-    font-size: clamp(30px, 4vw, 50px);
-    font-weight: 900;
-    color: #fff;
-    letter-spacing: 2px;
-    margin-bottom: 25px;
-    text-shadow: 0 0 30px rgba(184,146,255,0.3);
+    font-family: 'Fraunces', serif;
+    font-size: clamp(72px, 9vw, 114px);
+    line-height: 0.9;
+    font-weight: 700;
+    color: #4e2488;
+    letter-spacing: -0.06em;
+    margin-bottom: 16px;
 }
 
-.vote-header {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: clamp(40px, 5vw, 60px);
-    letter-spacing: 12px;
-    color: #f5e6d3;
-    margin-bottom: 30px;
+.vote-tagline {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 24px;
+    color: #4f4a79;
+    line-height: 1.45;
 }
 
 .vote-categories {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
+    display: grid;
+    gap: 16px;
 }
 
 .vote-cat {
-    background: rgba(184,146,255,0.05);
-    border-left: 3px solid #b892ff;
-    padding: 12px 20px;
-    font-size: 18px;
-    font-weight: 600;
-    color: rgba(255,255,255,0.9);
-    letter-spacing: 1.5px;
+    display: grid;
+    grid-template-columns: 58px 1fr auto;
+    align-items: center;
+    gap: 18px;
+    padding: 22px 24px;
+    border-radius: 24px;
+    border: 1px solid rgba(77, 45, 123, 0.14);
+    background: rgba(255, 255, 255, 0.84);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
 }
 
-.vote-cat span {
-    color: #b892ff;
+.vote-cat-icon {
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: #6f36b3;
+    color: #fff;
+    font-size: 26px;
+    font-weight: 700;
+}
+
+.vote-cat-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.vote-cat-copy strong {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 24px;
     font-weight: 800;
-    margin-left: 10px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #211f54;
 }
 
-.qr-wrapper {
+.vote-cat-copy span {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 19px;
+    line-height: 1.45;
+    color: #4f4a79;
+}
+
+.vote-cat em {
+    font-family: 'DM Sans', sans-serif;
+    font-style: normal;
+    font-size: 22px;
+    font-weight: 800;
+    color: #6f36b3;
+    letter-spacing: 0.06em;
+}
+
+.vote-qr-card {
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     gap: 20px;
+    min-height: 100%;
+    padding: 34px 30px;
+    border-radius: 32px;
+    background: linear-gradient(180deg, rgba(246, 241, 252, 0.96), rgba(243, 237, 250, 0.9));
+    border: 1px solid rgba(77, 45, 123, 0.12);
 }
 
-.qr-container {
+.vote-qr-frame {
     background: #fff;
-    padding: 20px;
-    border-radius: 20px;
-    box-shadow: 0 0 60px rgba(184,146,255,0.2), 0 20px 40px rgba(0,0,0,0.5);
-    transition: transform 0.3s ease;
+    padding: 22px;
+    border-radius: 28px;
+    box-shadow: 0 20px 50px rgba(66, 39, 110, 0.12);
 }
 
-.qr-container:hover {
-    transform: scale(1.05);
-}
-
-.qr-container img {
+.vote-qr-frame img {
     display: block;
-    width: 250px;
-    height: 250px;
-    border-radius: 8px;
+    width: min(360px, 26vw);
+    height: min(360px, 26vw);
+    border-radius: 16px;
 }
 
 .qr-caption {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 24px;
-    letter-spacing: 6px;
-    color: #f5e6d3;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #211f54;
+}
+
+.vote-qr-note {
+    font-family: 'DM Sans', sans-serif;
+    max-width: 360px;
+    text-align: center;
+    font-size: 20px;
+    line-height: 1.5;
+    color: #4f4a79;
+}
+
+.vote-sparkle {
+    position: absolute;
+    color: #a56ae2;
+    font-size: 30px;
+    opacity: 0.9;
+    z-index: 1;
+}
+
+.vote-sparkle-a { top: 11%; left: 12%; }
+.vote-sparkle-b { top: 14%; right: 15%; font-size: 24px; }
+.vote-sparkle-c { bottom: 18%; right: 11%; font-size: 22px; }
+.vote-sparkle-d { bottom: 12%; left: 10%; font-size: 20px; }
+
+@media (max-width: 1180px) {
+    .vote-card {
+        width: min(1200px, calc(100vw - 48px));
+        padding: 40px;
+        gap: 30px;
+    }
+
+    .vote-cat {
+        grid-template-columns: 48px 1fr auto;
+        padding: 18px 20px;
+    }
+
+    .vote-cat-icon {
+        width: 48px;
+        height: 48px;
+        font-size: 22px;
+    }
+
+    .vote-cat-copy strong {
+        font-size: 20px;
+    }
+
+    .vote-cat-copy span,
+    .vote-qr-note {
+        font-size: 17px;
+    }
 }
 
 
