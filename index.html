@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;700;800&family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;600;700;800;900&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -74,25 +75,11 @@
 
             <div class="vote-card">
                 <div class="vote-copy-column">
-                    <div class="vote-brand">
-                        <div class="vote-brand-mark" aria-hidden="true">
-                            <svg viewBox="0 0 72 56" fill="none">
-                                <path d="M23 9l11 11M49 9L38 20" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/>
-                                <path d="M18 24c0-6.6 5.4-12 12-12h4v26h-4c-6.6 0-12-5.4-12-12z" stroke="currentColor" stroke-width="3.5"/>
-                                <path d="M54 24c0-6.6-5.4-12-12-12h-4v26h4c6.6 0 12-5.4 12-12z" stroke="currentColor" stroke-width="3.5"/>
-                                <path d="M28 39l-8 12M44 39l8 12" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/>
-                            </svg>
-                        </div>
-                        <div class="vote-brand-kicker">UMN A Cappella</div>
-                        <div class="vote-brand-title">Riff Off</div>
-                    </div>
-
                     <div class="vote-copy-block">
                         <div class="vote-round-label" id="voteRoundLabel">ROUND 1</div>
                         <div class="vote-category-pill" id="voteCategoryLabel">POP PRINCESS CATEGORY</div>
                         <div class="vote-overline">You're voting for</div>
                         <div class="vote-team-label" id="voteTeamLabel">VOCAL U</div>
-                        <div class="vote-tagline">Thanks for supporting live a cappella!</div>
                     </div>
 
                     <div class="vote-categories">
@@ -129,7 +116,7 @@
                             <img id="qrImage" src="" alt="Vote QR Code" />
                         </div>
                         <div class="qr-caption">Scan to vote live</div>
-                        <div class="vote-qr-note">Anonymous scoring. One vote per performance.</div>
+                        <div class="vote-qr-note">Voting is anonymous, only one vote per performance.</div>
                     </div>
                 </div>
             </div>

@@ -649,19 +649,6 @@
                 <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1l1.8 7.2L21 10l-7.2 1.8L12 19l-1.8-7.2L3 10l7.2-1.8L12 1z"/></svg>
             </span>
 
-            <div class="brand">
-                <div class="brand-mark" aria-hidden="true">
-                    <svg viewBox="0 0 72 56" fill="none">
-                        <path d="M23 9l11 11M49 9L38 20" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/>
-                        <path d="M18 24c0-6.6 5.4-12 12-12h4v26h-4c-6.6 0-12-5.4-12-12z" stroke="currentColor" stroke-width="3.5"/>
-                        <path d="M54 24c0-6.6-5.4-12-12-12h-4v26h4c6.6 0 12-5.4 12-12z" stroke="currentColor" stroke-width="3.5"/>
-                        <path d="M28 39l-8 12M44 39l8 12" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/>
-                    </svg>
-                </div>
-                <div class="brand-kicker">UMN A Cappella</div>
-                <div class="brand-title">Riff Off</div>
-            </div>
-
             <div class="hero-icon" aria-hidden="true">
                 <svg viewBox="0 0 64 64" fill="none">
                     <circle cx="32" cy="32" r="23" stroke="currentColor" stroke-width="3.5"/>
@@ -791,11 +778,6 @@
                 <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1l1.8 7.2L21 10l-7.2 1.8L12 19l-1.8-7.2L3 10l7.2-1.8L12 1z"/></svg>
             </span>
 
-            <div class="brand" style="margin-bottom: 12px;">
-                <div class="brand-kicker">UMN A Cappella</div>
-                <div class="brand-title" style="font-size: 42px;">Riff Off</div>
-            </div>
-
             <div class="stage-hero" aria-hidden="true">
                 <svg viewBox="0 0 320 240" fill="none">
                     <defs>
@@ -873,19 +855,6 @@
                 <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1l1.8 7.2L21 10l-7.2 1.8L12 19l-1.8-7.2L3 10l7.2-1.8L12 1z"/></svg>
             </span>
 
-            <div class="brand">
-                <div class="brand-mark" aria-hidden="true">
-                    <svg viewBox="0 0 72 56" fill="none">
-                        <path d="M23 9l11 11M49 9L38 20" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/>
-                        <path d="M18 24c0-6.6 5.4-12 12-12h4v26h-4c-6.6 0-12-5.4-12-12z" stroke="currentColor" stroke-width="3.5"/>
-                        <path d="M54 24c0-6.6-5.4-12-12-12h-4v26h4c6.6 0 12-5.4 12-12z" stroke="currentColor" stroke-width="3.5"/>
-                        <path d="M28 39l-8 12M44 39l8 12" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/>
-                    </svg>
-                </div>
-                <div class="brand-kicker">UMN A Cappella</div>
-                <div class="brand-title">Riff Off</div>
-            </div>
-
             <div class="hero-icon" aria-hidden="true">
                 <svg viewBox="0 0 64 64" fill="none">
                     <path d="M21 14h22v6c0 6.1-4.9 11-11 11S21 26.1 21 20v-6z" stroke="currentColor" stroke-width="3"/>
@@ -926,6 +895,10 @@
     <script>
         const SUPABASE_URL = "https://pyuyuftlahwzczwpitzc.supabase.co";
         const SUPABASE_ANON_KEY = "sb_publishable_wcDaxE2mPycXrzy_PeCgAw_LsjPG38G";
+        const SUPABASE_HEADERS = {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`
+        };
         const params = new URLSearchParams(window.location.search);
         const previewPhase = params.get("preview");
         const directPhase = params.get("phase");
@@ -953,22 +926,25 @@
             phase: previewPhase || directPhase || "before"
         });
 
-        if (SUPABASE_URL && SUPABASE_ANON_KEY && typeof window.supabase !== "undefined" && !previewPhase) {
-            const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        if (SUPABASE_URL && SUPABASE_ANON_KEY && !previewPhase) {
+            fetchLiveState();
+            setInterval(fetchLiveState, 2000);
+        }
 
-            supabase.from("live_state").select("*").eq("id", 1).single().then(({ data }) => {
-                if (data) {
-                    currentViewState = normalizeState(data);
+        async function fetchLiveState() {
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/live_state?id=eq.1&select=*`, {
+                    headers: SUPABASE_HEADERS
+                });
+                if (!response.ok) return;
+                const rows = await response.json();
+                if (rows && rows[0]) {
+                    currentViewState = normalizeState(rows[0]);
                     renderState();
                 }
-            });
-
-            supabase.channel("live-updates")
-                .on("postgres_changes", { event: "UPDATE", schema: "public", table: "live_state" }, payload => {
-                    currentViewState = normalizeState(payload.new);
-                    renderState();
-                })
-                .subscribe();
+            } catch (error) {
+                console.error("Live state fetch failed", error);
+            }
         }
 
         function normalizeState(raw) {
