@@ -674,12 +674,6 @@
                 <p>Hang tight. Voting will open right after the performance.</p>
             </div>
 
-            <div class="info-card">
-                <div class="info-label">What's next?</div>
-                <div class="info-main" id="beforeCategory">Pop Princess Category</div>
-                <div class="info-sub">Up next: <span id="beforeTeam">Vocal U</span></div>
-            </div>
-
             <div class="flow-waves" aria-hidden="true">
                 <svg viewBox="0 0 480 120" preserveAspectRatio="none">
                     <path d="M0 82C68 54 112 50 181 71C243 90 290 114 348 99C397 86 438 52 480 64V120H0Z" fill="#e0cdf7"/>
@@ -705,19 +699,6 @@
                         <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
                     </svg>
                 </button>
-            </div>
-
-            <div class="brand" style="margin-bottom: 18px;">
-                <div class="brand-mark" aria-hidden="true">
-                    <svg viewBox="0 0 72 56" fill="none">
-                        <path d="M23 9l11 11M49 9L38 20" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/>
-                        <path d="M18 24c0-6.6 5.4-12 12-12h4v26h-4c-6.6 0-12-5.4-12-12z" stroke="currentColor" stroke-width="3.5"/>
-                        <path d="M54 24c0-6.6-5.4-12-12-12h-4v26h4c6.6 0 12-5.4 12-12z" stroke="currentColor" stroke-width="3.5"/>
-                        <path d="M28 39l-8 12M44 39l8 12" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/>
-                    </svg>
-                </div>
-                <div class="brand-kicker">UMN A Cappella</div>
-                <div class="brand-title" style="font-size: 36px;">Riff Off</div>
             </div>
 
             <div class="voting-copy">
@@ -943,10 +924,11 @@
     </div>
 
     <script>
-        const SUPABASE_URL = "";
-        const SUPABASE_ANON_KEY = "";
+        const SUPABASE_URL = "https://pyuyuftlahwzczwpitzc.supabase.co";
+        const SUPABASE_ANON_KEY = "sb_publishable_wcDaxE2mPycXrzy_PeCgAw_LsjPG38G";
         const params = new URLSearchParams(window.location.search);
         const previewPhase = params.get("preview");
+        const directPhase = params.get("phase");
         const TEAM_FALLBACK = params.get("team") || "Vocal U";
         const CATEGORY_FALLBACK = params.get("category") || "Pop Princess Category";
         const ROUND_FALLBACK = parseInt(params.get("round") || "1", 10);
@@ -968,7 +950,7 @@
             team: TEAM_FALLBACK,
             round: ROUND_FALLBACK,
             category: CATEGORY_FALLBACK,
-            phase: previewPhase || "before"
+            phase: previewPhase || directPhase || "before"
         });
 
         if (SUPABASE_URL && SUPABASE_ANON_KEY && typeof window.supabase !== "undefined" && !previewPhase) {
@@ -1027,8 +1009,6 @@
         }
 
         function renderState() {
-            document.getElementById("beforeCategory").textContent = currentViewState.category;
-            document.getElementById("beforeTeam").textContent = currentViewState.team;
             document.getElementById("openCategory").textContent = currentViewState.category;
             document.getElementById("openTeam").textContent = currentViewState.team;
 

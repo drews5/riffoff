@@ -11,8 +11,8 @@
 
 // ==================== LIVE SYNC ====================
 // Fill these in to enable Live Dynamic Updating on audience phones
-const SUPABASE_URL = "";
-const SUPABASE_ANON_KEY = "";
+const SUPABASE_URL = "https://pyuyuftlahwzczwpitzc.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_wcDaxE2mPycXrzy_PeCgAw_LsjPG38G";
 let supabaseClient = null;
 
 if (SUPABASE_URL && SUPABASE_ANON_KEY && typeof window.supabase !== 'undefined') {
@@ -385,8 +385,12 @@ function spinWheel() {
 function generateVoteQR(teamName, round) {
     try {
         const qrImg = document.getElementById('qrImage');
-        const url = window.location.origin + '/vote.html';
-        const encodedUrl = encodeURIComponent(url);
+        const url = new URL('/vote.html', window.location.origin);
+        url.searchParams.set('phase', 'open');
+        url.searchParams.set('team', teamName);
+        url.searchParams.set('round', String(round));
+        url.searchParams.set('category', currentCategory);
+        const encodedUrl = encodeURIComponent(url.toString());
         // Using an external API to ensure it always correctly displays
         qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodedUrl}&color=1a1025&bgcolor=ffffff`;
     } catch (e) {
