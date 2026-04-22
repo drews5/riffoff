@@ -7,7 +7,6 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
             --ink: #211f54;
@@ -313,6 +312,20 @@
             margin-bottom: 16px;
         }
 
+        .vote-mode-badge {
+            display: none;
+            margin-bottom: 12px;
+            font-size: 13px;
+            font-weight: 800;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--purple-deep);
+        }
+
+        .vote-mode-badge.show {
+            display: block;
+        }
+
         .voting-overline {
             font-size: 16px;
             color: var(--ink-soft);
@@ -326,12 +339,6 @@
             color: var(--purple-deep);
             letter-spacing: -0.06em;
             margin: 0;
-        }
-
-        .voting-tagline {
-            font-size: 17px;
-            color: var(--ink-soft);
-            margin-top: 10px;
         }
 
         .score-stack {
@@ -690,9 +697,9 @@
 
             <div class="voting-copy">
                 <div class="eyebrow" id="openCategory">Pop Princess Category</div>
+                <div class="vote-mode-badge" id="voteModeBadge"></div>
                 <div class="voting-overline">You're voting for</div>
                 <h2 class="voting-name" id="openTeam">Vocal U</h2>
-                <div class="voting-tagline">Thanks for supporting live a cappella!</div>
             </div>
 
             <form id="voteForm" novalidate>
@@ -764,7 +771,7 @@
                         <svg viewBox="0 0 24 24" fill="none">
                             <path d="M7 11V8a5 5 0 0110 0v3M6 11h12v9H6z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
-                        Your vote is anonymous. Vote once per performance.
+                        <span id="voteNoteText">Your vote is anonymous. Vote once per performance.</span>
                     </div>
                 </div>
             </form>
@@ -895,13 +902,17 @@
     <script>
         const SUPABASE_URL = "https://pyuyuftlahwzczwpitzc.supabase.co";
         const SUPABASE_ANON_KEY = "sb_publishable_wcDaxE2mPycXrzy_PeCgAw_LsjPG38G";
+        const DEFAULT_JUDGE_COUNT = 3;
         const SUPABASE_HEADERS = {
             apikey: SUPABASE_ANON_KEY,
-            Authorization: `Bearer ${SUPABASE_ANON_KEY}`
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            "Content-Type": "application/json"
         };
         const params = new URLSearchParams(window.location.search);
         const previewPhase = params.get("preview");
         const directPhase = params.get("phase");
+        const voteMode = params.get("mode") === "judge" ? "judge" : "audience";
+        const configuredJudgeCount = Math.max(1, parseInt(params.get("judges") || String(DEFAULT_JUDGE_COUNT), 10) || DEFAULT_JUDGE_COUNT);
         const TEAM_FALLBACK = params.get("team") || "Vocal U";
         const CATEGORY_FALLBACK = params.get("category") || "Pop Princess Category";
         const ROUND_FALLBACK = parseInt(params.get("round") || "1", 10);
@@ -916,6 +927,8 @@
         const voteForm = document.getElementById("voteForm");
         const submitVoteBtn = document.getElementById("submitVoteBtn");
         const voteStatus = document.getElementById("voteStatus");
+        const voteModeBadge = document.getElementById("voteModeBadge");
+        const voteNoteText = document.getElementById("voteNoteText");
         const sliders = Array.from(voteForm.querySelectorAll('input[type="range"]'));
         const closeButton = document.querySelector(".icon-button");
 
@@ -925,6 +938,11 @@
             category: CATEGORY_FALLBACK,
             phase: previewPhase || directPhase || "before"
         });
+
+        const voterKey = getOrCreateVoterKey(
+            voteMode === "judge" ? "riffoff-judge-id" : "riffoff-audience-id",
+            voteMode === "judge" ? "judge" : "aud"
+        );
 
         if (SUPABASE_URL && SUPABASE_ANON_KEY && !previewPhase) {
             fetchLiveState();
@@ -945,6 +963,49 @@
             } catch (error) {
                 console.error("Live state fetch failed", error);
             }
+        }
+
+        function getOrCreateVoterKey(storageKey, prefix) {
+            let key = localStorage.getItem(storageKey);
+            if (!key) {
+                key = `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
+                localStorage.setItem(storageKey, key);
+            }
+            return key;
+        }
+
+        function submittedVoteKey() {
+            return ["riffoff-voted", voteMode, voterKey, performanceKey()].join(":");
+        }
+
+        async function submitVoteToSupabase(vote) {
+            const response = await fetch(
+                `${SUPABASE_URL}/rest/v1/votes?on_conflict=team,round,category,vote_mode,voter_key`,
+                {
+                    method: "POST",
+                    headers: {
+                        ...SUPABASE_HEADERS,
+                        Prefer: "resolution=merge-duplicates,return=representation"
+                    },
+                    body: JSON.stringify({
+                        team: vote.team,
+                        round: vote.round,
+                        category: vote.category,
+                        vote_mode: voteMode,
+                        voter_key: voterKey,
+                        judge_count: configuredJudgeCount,
+                        enjoyability: vote.enjoyability,
+                        vocal_quality: vote.vocalQuality,
+                        performance_quality: vote.performanceQuality
+                    })
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(`Vote save failed with ${response.status}`);
+            }
+
+            return response.json();
         }
 
         function normalizeState(raw) {
@@ -975,7 +1036,7 @@
         }
 
         function hasVotedForCurrentPerformance() {
-            return localStorage.getItem("riffoff-voted:" + performanceKey()) === "1";
+            return localStorage.getItem(submittedVoteKey()) === "1";
         }
 
         function setActivePanel(phase) {
@@ -987,6 +1048,15 @@
         function renderState() {
             document.getElementById("openCategory").textContent = currentViewState.category;
             document.getElementById("openTeam").textContent = currentViewState.team;
+            if (voteMode === "judge") {
+                voteModeBadge.textContent = `Judge Ballot (${configuredJudgeCount} judges total)`;
+                voteModeBadge.classList.add("show");
+                voteNoteText.textContent = `Judge vote counts as 1/${configuredJudgeCount} of the judges' 50%.`;
+            } else {
+                voteModeBadge.textContent = "";
+                voteModeBadge.classList.remove("show");
+                voteNoteText.textContent = "Your vote is anonymous. Vote once per performance.";
+            }
 
             const phase = statePanels[currentViewState.phase] ? currentViewState.phase : "before";
             setActivePanel(phase);
@@ -1006,18 +1076,18 @@
             if (message) {
                 voteStatus.textContent = message;
                 voteStatus.classList.add("show");
-                submitVoteBtn.textContent = "Vote Submitted";
+                submitVoteBtn.textContent = voteMode === "judge" ? "Judge Vote Submitted" : "Vote Submitted";
                 return;
             }
 
             if (voted && isOpen) {
                 voteStatus.textContent = "Your vote for this performance is already saved. Thanks for supporting the group!";
                 voteStatus.classList.add("show");
-                submitVoteBtn.textContent = "Vote Submitted";
+                submitVoteBtn.textContent = voteMode === "judge" ? "Judge Vote Submitted" : "Vote Submitted";
             } else {
                 voteStatus.textContent = "";
                 voteStatus.classList.remove("show");
-                submitVoteBtn.textContent = "Submit My Vote";
+                submitVoteBtn.textContent = voteMode === "judge" ? "Submit Judge Vote" : "Submit My Vote";
             }
         }
 
@@ -1044,7 +1114,7 @@
             window.location.href = "index.html";
         });
 
-        voteForm.addEventListener("submit", (event) => {
+        voteForm.addEventListener("submit", async (event) => {
             event.preventDefault();
 
             if (hasVotedForCurrentPerformance()) {
@@ -1062,16 +1132,18 @@
                 timestamp: Date.now()
             };
 
-            const existingVotes = JSON.parse(localStorage.getItem("riffoff-votes") || "[]");
-            const remainingVotes = existingVotes.filter((entry) => {
-                return !(entry.team === vote.team && entry.round === vote.round && (entry.category || "") === vote.category);
-            });
-
-            remainingVotes.push(vote);
-            localStorage.setItem("riffoff-votes", JSON.stringify(remainingVotes));
-            localStorage.setItem("riffoff-voted:" + performanceKey(), "1");
-
-            renderVoteLockState("Your vote is in. Thanks for supporting live a cappella!");
+            try {
+                await submitVoteToSupabase(vote);
+                localStorage.setItem(submittedVoteKey(), "1");
+                renderVoteLockState(voteMode === "judge" ? "Judge vote submitted." : "Your vote is in. Thanks!");
+            } catch (error) {
+                console.error("Vote save failed", error);
+                renderVoteLockState("We couldn't save that vote yet. Please try again.");
+                submitVoteBtn.disabled = false;
+                sliders.forEach((slider) => {
+                    slider.disabled = false;
+                });
+            }
         });
 
         renderState();

@@ -13,12 +13,24 @@
 // Fill these in to enable Live Dynamic Updating on audience phones
 const SUPABASE_URL = "https://pyuyuftlahwzczwpitzc.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_wcDaxE2mPycXrzy_PeCgAw_LsjPG38G";
+const DEFAULT_JUDGE_COUNT = 3;
 const SUPABASE_HEADERS = {
     apikey: SUPABASE_ANON_KEY,
     Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
     'Content-Type': 'application/json',
     Prefer: 'return=minimal'
 };
+const VOTES_SELECT = [
+    'team',
+    'round',
+    'category',
+    'vote_mode',
+    'voter_key',
+    'judge_count',
+    'enjoyability',
+    'vocal_quality',
+    'performance_quality'
+].join(',');
 
 async function updateLiveState(teamName, round, isOpen, extraState = {}) {
     if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return;
@@ -403,6 +415,92 @@ function generateVoteQR(teamName, round) {
     }
 }
 
+function getJudgeVoteLink() {
+    const url = new URL('/vote.html', window.location.origin);
+    url.searchParams.set('mode', 'judge');
+    url.searchParams.set('judges', String(DEFAULT_JUDGE_COUNT));
+    return url.toString();
+}
+
+async function fetchVoteRows() {
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return [];
+    try {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/votes?select=${encodeURIComponent(VOTES_SELECT)}`, {
+            headers: {
+                apikey: SUPABASE_ANON_KEY,
+                Authorization: `Bearer ${SUPABASE_ANON_KEY}`
+            }
+        });
+        if (!response.ok) {
+            throw new Error(`Vote fetch failed with ${response.status}`);
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('Vote fetch failed', error);
+        return null;
+    }
+}
+
+function formatScore(value) {
+    return Number.isFinite(value) ? value.toFixed(2) : '0.00';
+}
+
+function averageCategory(votes, category) {
+    if (!votes.length) return 0;
+    const total = votes.reduce((sum, vote) => sum + (Number(vote[category]) || 0), 0);
+    return total / votes.length;
+}
+
+function judgeContribution(votes, category, judgeCount) {
+    if (!votes.length || !judgeCount) return 0;
+    const total = votes.reduce((sum, vote) => sum + (Number(vote[category]) || 0), 0);
+    return total / judgeCount;
+}
+
+function calculateWeightedScores(votes) {
+    const grouped = {};
+
+    TEAM_NAMES.forEach((name) => {
+        for (let round = 1; round <= maxRounds; round++) {
+            grouped[`${round}|${name}`] = {
+                team: name,
+                round,
+                audienceVotes: [],
+                judgeVotes: [],
+                judgeCount: DEFAULT_JUDGE_COUNT
+            };
+        }
+    });
+
+    (votes || []).forEach((vote) => {
+        const key = `${vote.round}|${vote.team}`;
+        if (!grouped[key]) {
+            grouped[key] = {
+                team: vote.team,
+                round: vote.round,
+                audienceVotes: [],
+                judgeVotes: [],
+                judgeCount: DEFAULT_JUDGE_COUNT
+            };
+        }
+
+        const normalizedVote = {
+            enjoyability: Number(vote.enjoyability) || 0,
+            vocalQuality: Number(vote.vocal_quality) || 0,
+            performanceQuality: Number(vote.performance_quality) || 0
+        };
+
+        if (vote.vote_mode === 'judge') {
+            grouped[key].judgeVotes.push(normalizedVote);
+            grouped[key].judgeCount = Math.max(grouped[key].judgeCount, Number(vote.judge_count) || DEFAULT_JUDGE_COUNT);
+        } else {
+            grouped[key].audienceVotes.push(normalizedVote);
+        }
+    });
+
+    return grouped;
+}
+
 // ==================== SCORES DASHBOARD ====================
 function renderScores() {
     const grid = document.getElementById('scoresGrid');
@@ -471,6 +569,64 @@ function renderScores() {
     });
 }
 
+async function renderScoresLive() {
+    const grid = document.getElementById('scoresGrid');
+    grid.innerHTML = '<div class="round-scores-block"><h3>Loading live scores...</h3></div>';
+
+    const votes = await fetchVoteRows();
+    if (votes === null) {
+        grid.innerHTML = '<div class="round-scores-block"><h3>Live scores unavailable</h3><p class="scores-empty">Set up the Supabase `votes` table and policies to see live results here.</p></div>';
+        return;
+    }
+
+    const groupedScores = calculateWeightedScores(votes);
+    grid.innerHTML = '';
+
+    for (let r = 1; r <= maxRounds; r++) {
+        const block = document.createElement('div');
+        block.className = 'round-scores-block';
+
+        block.innerHTML = `
+            <h3>ROUND ${r}</h3>
+            <p class="scores-empty">Audience votes contribute 50%. Judges contribute 50% split across ${DEFAULT_JUDGE_COUNT} judges.</p>
+            <table class="scores-table">
+                <thead>
+                    <tr>
+                        <th>Team</th>
+                        <th>Enjoyability</th>
+                        <th>Vocal Quality</th>
+                        <th>Performance</th>
+                        <th>Weighted Total</th>
+                        <th>Audience</th>
+                        <th>Judges</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${TEAM_NAMES.map((name) => {
+                        const group = groupedScores[`${r}|${name}`];
+                        const weightedEnjoyability = (averageCategory(group.audienceVotes, 'enjoyability') * 0.5) + (judgeContribution(group.judgeVotes, 'enjoyability', group.judgeCount) * 0.5);
+                        const weightedVocal = (averageCategory(group.audienceVotes, 'vocalQuality') * 0.5) + (judgeContribution(group.judgeVotes, 'vocalQuality', group.judgeCount) * 0.5);
+                        const weightedPerformance = (averageCategory(group.audienceVotes, 'performanceQuality') * 0.5) + (judgeContribution(group.judgeVotes, 'performanceQuality', group.judgeCount) * 0.5);
+                        const total = weightedEnjoyability + weightedVocal + weightedPerformance;
+                        return `
+                        <tr>
+                            <td>${name}</td>
+                            <td>${formatScore(weightedEnjoyability)}</td>
+                            <td>${formatScore(weightedVocal)}</td>
+                            <td>${formatScore(weightedPerformance)}</td>
+                            <td class="total-cell">${formatScore(total)}</td>
+                            <td class="score-count-cell">${group.audienceVotes.length}</td>
+                            <td class="score-count-cell">${group.judgeVotes.length}/${group.judgeCount}</td>
+                        </tr>`;
+                    }).join('')}
+                </tbody>
+            </table>
+        `;
+
+        grid.appendChild(block);
+    }
+}
+
 // ==================== NAVIGATION STATE MACHINE ====================
 function showTeam(teamKey) {
     currentTeamKey = teamKey;
@@ -513,7 +669,7 @@ function showRoundTransition() {
             category: currentCategory,
             event_complete: true
         });
-        renderScores();
+        renderScoresLive();
         showScreen('scores');
         return;
     }
@@ -559,7 +715,7 @@ document.addEventListener('keydown', (e) => {
             }
             if (key === 'escape') {
                 previousScreen = 'wheel';
-                renderScores();
+                renderScoresLive();
                 showScreen('scores');
             }
             break;
@@ -575,7 +731,7 @@ document.addEventListener('keydown', (e) => {
             }
             if (key === 'escape') {
                 previousScreen = 'team';
-                renderScores();
+                renderScoresLive();
                 showScreen('scores');
             }
             break;
@@ -602,7 +758,7 @@ document.addEventListener('keydown', (e) => {
                     category: currentCategory,
                     event_complete: false
                 });
-                renderScores();
+                renderScoresLive();
                 showScreen('scores');
             }
             break;
@@ -655,9 +811,16 @@ document.getElementById('popupOverlay').addEventListener('click', () => {
 document.addEventListener('DOMContentLoaded', () => {
     createSparkles();
     showScreen('title');
+    window.getJudgeVoteLink = getJudgeVoteLink;
+    console.info('Judge live voting link:', getJudgeVoteLink());
     updateLiveState("", currentRound, false, {
         phase: 'before',
         category: currentCategory,
         event_complete: false
     });
+    setInterval(() => {
+        if (currentScreen === 'scores') {
+            renderScoresLive();
+        }
+    }, 3000);
 });
