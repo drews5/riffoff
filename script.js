@@ -1,136 +1,77 @@
 /* ================================================
-   RIFF OFF – Interactive Slideshow Controller
-   ================================================
-   Flow:
-   TITLE → (Space) → WHEEL Round 1 → (Spin) → Category popup
-   → (Team key V/7/B/E/U) → TEAM DISPLAY → (Space) → VOTE QR
-   → (Team key) → next team → (Space) → VOTE QR
-   → (after 5 teams) → ROUND TRANSITION → (Space) → WHEEL
-   → (Esc at any time) → SCORES
+   RIFF OFF - Slideshow Controller
    ================================================ */
 
-// ==================== LIVE SYNC ====================
-// Fill these in to enable Live Dynamic Updating on audience phones
-const SUPABASE_URL = "https://pyuyuftlahwzczwpitzc.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_wcDaxE2mPycXrzy_PeCgAw_LsjPG38G";
-const DEFAULT_JUDGE_COUNT = 3;
-const SUPABASE_HEADERS = {
-    apikey: SUPABASE_ANON_KEY,
-    Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-    'Content-Type': 'application/json',
-    Prefer: 'return=minimal'
-};
-const VOTES_SELECT = [
-    'team',
-    'round',
-    'category',
-    'vote_mode',
-    'voter_key',
-    'judge_count',
-    'enjoyability',
-    'vocal_quality',
-    'performance_quality'
-].join(',');
-
-async function updateLiveState(teamName, round, isOpen, extraState = {}) {
-    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return;
-    try {
-        await fetch(`${SUPABASE_URL}/rest/v1/live_state?id=eq.1`, {
-            method: 'PATCH',
-            headers: SUPABASE_HEADERS,
-            body: JSON.stringify({
-            id: 1,
-            team: teamName,
-            round: round,
-            is_open: isOpen,
-            ...extraState
-            })
-        });
-    } catch (e) {
-        console.error("Live sync failed", e);
-    }
-}
-
-// ==================== STATE ====================
 const TEAMS = {
-    'v': 'VOCAL U',
-    '7': '7 DAYS',
-    'b': 'BASSES WILD',
-    'e': 'THE ENCHANTMENTS',
-    'u': 'URBAN SOUND'
+    v: {
+        name: "VOCAL U",
+        logo: "assets/logos/vocal-u.png"
+    },
+    "7": {
+        name: "7 DAYS",
+        logo: "assets/logos/7-days.png"
+    },
+    b: {
+        name: "BASSES WILD",
+        logo: "assets/logos/basses-wild.png"
+    },
+    e: {
+        name: "THE ENCHANTMENTS",
+        logo: "assets/logos/enchantments.png"
+    },
+    u: {
+        name: "URBAN SOUND",
+        logo: "assets/logos/urban-sound.png"
+    }
+};
+
+const ROUND_FORM_URLS = {
+    1: "https://z.umn.edu/riff1",
+    2: "https://z.umn.edu/riff2",
+    3: "https://z.umn.edu/riff3"
 };
 
 const TEAM_KEYS = Object.keys(TEAMS);
-const TEAM_NAMES = Object.values(TEAMS);
+const TEAM_CODE_MAP = {
+    KeyV: "v",
+    Digit7: "7",
+    KeyB: "b",
+    KeyE: "e",
+    KeyU: "u"
+};
 
-let currentScreen = 'title';
+const WHEEL_SHORTCUTS = {
+    Digit1: 1,
+    Digit2: 2,
+    Digit3: 3
+};
+
+const VOTE_SHORTCUTS = {
+    Digit4: 1,
+    Digit5: 2,
+    Digit6: 3
+};
+
+const DEFAULT_TEAM_KEY = "v";
+const DEFAULT_CATEGORY = "Pop Princess Category";
+const MAX_ROUNDS = 3;
+
+function displayUrl(url) {
+    return url.replace(/^https?:\/\//, "");
+}
+
+let currentScreen = "title";
 let currentRound = 1;
-let maxRounds = 3;
+let currentTeamKey = DEFAULT_TEAM_KEY;
+let currentCategory = DEFAULT_CATEGORY;
 let performedTeams = new Set();
-let currentTeamKey = null;
-let previousScreen = null; // for returning from scores
 let isSpinning = false;
-let wheelHasSpun = false; // track if wheel was spun this round
-let currentCategory = "Pop Princess Category";
+let wheelHasSpun = false;
 
-// Scores: { teamName: { round: { enjoyability: n, vocalQuality: n, performanceQuality: n } } }
-let scores = {};
-TEAM_NAMES.forEach(name => {
-    scores[name] = {};
-    for (let r = 1; r <= maxRounds; r++) {
-        scores[name][r] = { enjoyability: 0, vocalQuality: 0, performanceQuality: 0 };
-    }
-});
-
-// ==================== SCREEN MANAGEMENT ====================
-function showScreen(screenId) {
-    // Deactivate all
-    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-    
-    const target = document.getElementById('screen-' + screenId);
-    target.classList.add('active');
-    
-    currentScreen = screenId;
-    
-    // Re-trigger animations for certain screens
-    if (screenId === 'team') {
-        const teamNameEl = document.getElementById('teamName');
-        teamNameEl.style.animation = 'none';
-        teamNameEl.offsetHeight; // force reflow
-        teamNameEl.style.animation = '';
-    }
-    
-    if (screenId === 'round-transition') {
-        const rtText = document.getElementById('roundTransitionText');
-        rtText.style.animation = 'none';
-        rtText.offsetHeight;
-        rtText.style.animation = '';
-    }
-}
-
-// ==================== TITLE SCREEN SPARKLES ====================
-function createSparkles() {
-    const field = document.getElementById('sparkleField');
-    if (!field) return;
-    for (let i = 0; i < 30; i++) {
-        const s = document.createElement('div');
-        s.className = 'sparkle';
-        s.textContent = '✦';
-        s.style.left = Math.random() * 100 + '%';
-        s.style.top = Math.random() * 100 + '%';
-        s.style.animationDelay = (Math.random() * 4) + 's';
-        s.style.fontSize = (12 + Math.random() * 16) + 'px';
-        field.appendChild(s);
-    }
-}
-
-// ==================== WHEEL DRAWING ====================
 const W = 800;
 const H = 800;
-
 const centerX = W / 2;
 const centerY = H / 2;
-
 const innerRadius = 80;
 const wedgeOuterRadius = 340;
 const innerDarkRingRadius = innerRadius + 20;
@@ -138,9 +79,9 @@ const blackRingRadius = 354;
 const thinGoldRadius = 372;
 
 const colors = [
-    "#DC2626", "#EA580C", "#EAB308", "#16A34A", 
+    "#DC2626", "#EA580C", "#EAB308", "#16A34A",
     "#0891B2", "#2563EB", "#7C3AED", "#DB2777",
-    "#DC2626", "#EA580C", "#EAB308", "#16A34A", 
+    "#DC2626", "#EA580C", "#EAB308", "#16A34A",
     "#0891B2", "#2563EB", "#7C3AED", "#DB2777",
     "#DC2626", "#EA580C", "#EAB308", "#16A34A"
 ];
@@ -148,13 +89,13 @@ const colors = [
 const categoryData = [
     { text: "Songs About Sex", stars: 0 },
     { text: "Pop Royalty", stars: 0 },
-    { text: "", stars: 1 }, 
+    { text: "", stars: 1 },
     { text: "Acoustic Pop", stars: 0 },
-    { text: "Bands", stars: 0 },       
+    { text: "Bands", stars: 0 },
     { text: "Stadium Rock", stars: 0 },
     { text: "", stars: 2 },
     { text: "The Judd's", stars: 0 },
-    { text: "Pop Princess", stars: 0 }, 
+    { text: "Pop Princess", stars: 0 },
     { text: "Radio Hits", stars: 0 },
     { text: "", stars: 3 },
     { text: "Party Rock Anthems", stars: 0 },
@@ -168,23 +109,181 @@ const categoryData = [
     { text: "Boy Bands", stars: 0 }
 ];
 
-const categories = categoryData.map((c, i) => ({ ...c, color: colors[i] }));
+const categories = categoryData.map((category, index) => ({ ...category, color: colors[index] }));
 const numSlices = categories.length;
 const sliceAngle = (2 * Math.PI) / numSlices;
 
-let canvas, ctx;
+let riggedTargets = ["Pop Princess", "Mashup", "Ballad"];
+let canvas;
+let ctx;
 let currentRotation = 0;
 
+function shuffleRiggedTargets() {
+    riggedTargets = ["Pop Princess", "Mashup", "Ballad"];
+    riggedTargets.sort(() => Math.random() - 0.5);
+}
+
+shuffleRiggedTargets();
+
+function isSpaceKey(event) {
+    return event.key === " " || event.key === "Spacebar" || event.code === "Space";
+}
+
+function getTeamKey(event) {
+    const key = (event.key || "").toLowerCase();
+    if (TEAM_KEYS.includes(key)) {
+        return key;
+    }
+
+    return TEAM_CODE_MAP[event.code] || null;
+}
+
+function getWheelShortcutRound(event) {
+    return WHEEL_SHORTCUTS[event.code] || null;
+}
+
+function getVoteShortcutRound(event) {
+    return VOTE_SHORTCUTS[event.code] || null;
+}
+
+function hidePopup() {
+    const overlay = document.getElementById("popupOverlay");
+    const popup = document.getElementById("popupObj");
+    if (overlay) overlay.classList.remove("active");
+    if (popup) popup.classList.remove("show");
+}
+
+function updateRoundIndicator() {
+    const indicator = document.getElementById("roundIndicator");
+    if (indicator) {
+        indicator.textContent = `Round ${currentRound}`;
+    }
+}
+
+function ensureTeamScreen() {
+    let screen = document.getElementById("screen-team");
+    if (!screen) {
+        screen = document.createElement("div");
+        screen.className = "screen";
+        screen.id = "screen-team";
+        screen.innerHTML = `
+            <div class="team-display-bg">
+                <img class="team-logo" id="teamLogo" src="" alt="Team logo">
+            </div>
+        `;
+        document.body.appendChild(screen);
+    }
+
+    let logo = document.getElementById("teamLogo");
+    if (!logo) {
+        logo = document.createElement("img");
+        logo.className = "team-logo";
+        logo.id = "teamLogo";
+        logo.alt = "Team logo";
+        screen.firstElementChild.appendChild(logo);
+    }
+
+    return logo;
+}
+
+function ensureVoteScreen() {
+    let screen = document.getElementById("screen-vote");
+    if (!screen) {
+        screen = document.createElement("div");
+        screen.className = "screen";
+        screen.id = "screen-vote";
+        screen.innerHTML = `
+            <div class="vote-screen">
+                <div class="vote-sparkle-field" aria-hidden="true">
+                    <span class="vote-sparkle vote-sparkle-a">&#10022;</span>
+                    <span class="vote-sparkle vote-sparkle-b">&#10022;</span>
+                    <span class="vote-sparkle vote-sparkle-c">&#10022;</span>
+                    <span class="vote-sparkle vote-sparkle-d">&#10022;</span>
+                </div>
+                <div class="vote-slide">
+                    <div class="vote-topline">
+                        <div class="vote-round-label" id="voteRoundLabel">Round 1</div>
+                        <div class="vote-category-pill" id="voteCategoryLabel">POP PRINCESS CATEGORY</div>
+                    </div>
+                    <div class="vote-team-label" id="voteTeamLabel">VOCAL U</div>
+                    <div class="vote-criteria">
+                        <div class="vote-criterion">Enjoyability</div>
+                        <div class="vote-criterion">Vocal Quality</div>
+                        <div class="vote-criterion">Performance Quality</div>
+                    </div>
+                    <div class="vote-qr-block">
+                        <div class="vote-qr-frame">
+                            <img id="qrImage" src="" alt="Voting QR code">
+                        </div>
+                        <div class="vote-link-label" id="voteQrLink">z.umn.edu/riff1</div>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(screen);
+    }
+
+    return {
+        roundLabel: document.getElementById("voteRoundLabel"),
+        categoryLabel: document.getElementById("voteCategoryLabel"),
+        teamLabel: document.getElementById("voteTeamLabel"),
+        qrLink: document.getElementById("voteQrLink"),
+        qrImage: document.getElementById("qrImage")
+    };
+}
+
+function showScreen(screenId) {
+    document.querySelectorAll(".screen").forEach((screen) => screen.classList.remove("active"));
+
+    const target = document.getElementById(`screen-${screenId}`);
+    if (!target) return;
+
+    target.classList.add("active");
+    currentScreen = screenId;
+
+    if (screenId === "team") {
+        const logo = ensureTeamScreen();
+        logo.classList.remove("team-logo-show");
+        void logo.offsetWidth;
+        logo.classList.add("team-logo-show");
+    }
+
+    if (screenId === "round-transition") {
+        const roundText = document.getElementById("roundTransitionText");
+        if (roundText) {
+            roundText.style.animation = "none";
+            void roundText.offsetHeight;
+            roundText.style.animation = "";
+        }
+    }
+}
+
+function createSparkles() {
+    const field = document.getElementById("sparkleField");
+    if (!field) return;
+
+    for (let i = 0; i < 30; i += 1) {
+        const sparkle = document.createElement("div");
+        sparkle.className = "sparkle";
+        sparkle.textContent = "✦";
+        sparkle.style.left = `${Math.random() * 100}%`;
+        sparkle.style.top = `${Math.random() * 100}%`;
+        sparkle.style.animationDelay = `${Math.random() * 4}s`;
+        sparkle.style.fontSize = `${12 + Math.random() * 16}px`;
+        field.appendChild(sparkle);
+    }
+}
+
 function initWheel() {
-    canvas = document.getElementById('wheelCanvas');
+    canvas = document.getElementById("wheelCanvas");
     if (!canvas) return;
-    ctx = canvas.getContext('2d');
-    
+
+    ctx = canvas.getContext("2d");
     const dpr = window.devicePixelRatio || 1;
     canvas.width = W * dpr;
     canvas.height = H * dpr;
     ctx.scale(dpr, dpr);
-    
+
     drawWheel(currentRotation);
 }
 
@@ -192,66 +291,67 @@ function getLinesForCategory(text) {
     if (!text) return [];
     const words = text.split(" ");
     if (words.length <= 2) return [words.join(" ")];
-    if (words.length === 3) return [words[0] + " " + words[1], words[2]];
-    return [words[0] + " " + words[1], words.slice(2).join(" ")];
+    if (words.length === 3) return [`${words[0]} ${words[1]}`, words[2]];
+    return [`${words[0]} ${words[1]}`, words.slice(2).join(" ")];
 }
 
 function drawWheel(rotationDeg = 0) {
     if (!ctx) return;
+
     const rotationRad = (rotationDeg * Math.PI) / 180;
-    
     ctx.clearRect(0, 0, W, H);
-    
+
     ctx.save();
     ctx.translate(centerX, centerY);
     ctx.rotate(rotationRad);
     ctx.translate(-centerX, -centerY);
-    
-    for (let i = 0; i < numSlices; i++) {
+
+    for (let i = 0; i < numSlices; i += 1) {
         const startAngle = i * sliceAngle;
         const endAngle = (i + 1) * sliceAngle;
-        
+
         ctx.beginPath();
         ctx.moveTo(centerX, centerY);
         ctx.arc(centerX, centerY, wedgeOuterRadius, startAngle, endAngle);
         ctx.closePath();
-        
-        let sliceGradient = ctx.createRadialGradient(centerX, centerY, innerRadius, centerX, centerY, wedgeOuterRadius);
+
+        const sliceGradient = ctx.createRadialGradient(centerX, centerY, innerRadius, centerX, centerY, wedgeOuterRadius);
         sliceGradient.addColorStop(0, "#ffffff");
         sliceGradient.addColorStop(0.35, "#ffffff");
         sliceGradient.addColorStop(0.85, categories[i].color);
         sliceGradient.addColorStop(1, categories[i].color);
         ctx.fillStyle = sliceGradient;
         ctx.fill();
-        
+
         ctx.lineWidth = 6;
         ctx.strokeStyle = categories[i].color;
         ctx.stroke();
     }
-    
+
     ctx.restore();
-    
+
     ctx.beginPath();
     ctx.arc(centerX, centerY, innerDarkRingRadius, 0, 2 * Math.PI);
     ctx.lineWidth = 10;
     ctx.strokeStyle = "#555555";
     ctx.stroke();
-    
+
     ctx.beginPath();
     ctx.arc(centerX, centerY, blackRingRadius, 0, 2 * Math.PI);
     ctx.lineWidth = 26;
     ctx.strokeStyle = "#111";
     ctx.stroke();
-    
+
     ctx.save();
     ctx.translate(centerX, centerY);
     ctx.rotate(rotationRad);
     ctx.translate(-centerX, -centerY);
-    for (let i = 0; i < numSlices * 2; i++) {
+
+    for (let i = 0; i < numSlices * 2; i += 1) {
         const offsetAngle = i * (Math.PI / numSlices) + (Math.PI / numSlices / 2);
         const x = centerX + Math.cos(offsetAngle) * blackRingRadius;
         const y = centerY + Math.sin(offsetAngle) * blackRingRadius;
-        
+
         ctx.beginPath();
         ctx.arc(x, y, 7, 0, 2 * Math.PI);
         ctx.fillStyle = "#ffffff";
@@ -260,19 +360,20 @@ function drawWheel(rotationDeg = 0) {
         ctx.strokeStyle = "#f2c94c";
         ctx.stroke();
     }
+
     ctx.restore();
-    
+
     ctx.beginPath();
     ctx.arc(centerX, centerY, thinGoldRadius, 0, 2 * Math.PI);
     ctx.lineWidth = 6;
     ctx.strokeStyle = "#f2c94c";
     ctx.stroke();
-    
-    let capGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, innerRadius);
+
+    const capGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, innerRadius);
     capGradient.addColorStop(0, "#ffffff");
     capGradient.addColorStop(0.6, "#fff4cc");
     capGradient.addColorStop(1, "#f2c94c");
-    
+
     ctx.beginPath();
     ctx.arc(centerX, centerY, innerRadius, 0, 2 * Math.PI);
     ctx.fillStyle = capGradient;
@@ -280,26 +381,25 @@ function drawWheel(rotationDeg = 0) {
     ctx.lineWidth = 6;
     ctx.strokeStyle = "#ffffff";
     ctx.stroke();
-    
+
     ctx.textBaseline = "middle";
-    for (let i = 0; i < numSlices; i++) {
+
+    for (let i = 0; i < numSlices; i += 1) {
         const localMidAngle = i * sliceAngle + sliceAngle / 2;
         const globalAngle = (localMidAngle + rotationRad) % (2 * Math.PI);
-        let effGlobal = globalAngle >= 0 ? globalAngle : globalAngle + 2 * Math.PI;
-        
+        const effectiveAngle = globalAngle >= 0 ? globalAngle : globalAngle + 2 * Math.PI;
+        const isLeftSide = effectiveAngle > Math.PI / 2 && effectiveAngle < (3 * Math.PI) / 2;
+        const outerBoundConstraint = wedgeOuterRadius - 15;
+
         ctx.save();
         ctx.translate(centerX, centerY);
         ctx.rotate(localMidAngle + rotationRad);
-        
         ctx.fillStyle = "#111";
-        const outerBoundConstraint = wedgeOuterRadius - 15;
-        
-        const isLeftSide = effGlobal > Math.PI / 2 && effGlobal < (3 * Math.PI) / 2;
-        
+
         if (categories[i].text === "") {
             const starsText = "★ ".repeat(categories[i].stars).trim();
             ctx.font = "bold 28px Arial, sans-serif";
-            
+
             if (isLeftSide) {
                 ctx.rotate(Math.PI);
                 ctx.textAlign = "left";
@@ -311,516 +411,271 @@ function drawWheel(rotationDeg = 0) {
         } else {
             const lines = getLinesForCategory(categories[i].text);
             const lineSpacing = lines.length > 2 ? 18 : 24;
-            
             ctx.font = lines.length > 2 || categories[i].text.length > 12
                 ? "bold 18px Helvetica, Arial, sans-serif"
                 : "bold 22px Helvetica, Arial, sans-serif";
-            
+
             if (isLeftSide) {
                 ctx.rotate(Math.PI);
                 ctx.textAlign = "left";
-                for (let j = 0; j < lines.length; j++) {
+                for (let j = 0; j < lines.length; j += 1) {
                     ctx.fillText(lines[j], -outerBoundConstraint, (j - (lines.length - 1) / 2) * lineSpacing);
                 }
             } else {
                 ctx.textAlign = "right";
-                for (let j = 0; j < lines.length; j++) {
+                for (let j = 0; j < lines.length; j += 1) {
                     ctx.fillText(lines[j], outerBoundConstraint, (j - (lines.length - 1) / 2) * lineSpacing);
                 }
             }
         }
+
         ctx.restore();
     }
 }
 
-// ==================== WHEEL SPIN ====================
-let riggedTargets = ['Pop Princess', 'Mashup', 'Ballad'];
-riggedTargets.sort(() => Math.random() - 0.5);
-
 function spinWheel() {
     if (isSpinning) return;
-    
-    document.getElementById('popupOverlay').classList.remove('active');
-    document.getElementById('popupObj').classList.remove('show');
-    
+
+    hidePopup();
     isSpinning = true;
-    
-    let targetText = "";
+
+    let targetText;
     if (riggedTargets.length > 0) {
         targetText = riggedTargets.pop();
     } else {
-        const fallback = categories.filter(c => c.text !== "");
+        const fallback = categories.filter((category) => category.text !== "");
         targetText = fallback[Math.floor(Math.random() * fallback.length)].text;
     }
-    
-    const targetIndex = categories.findIndex(c => c.text === targetText);
+
+    const targetIndex = categories.findIndex((category) => category.text === targetText);
     const sliceDeg = 360 / numSlices;
     const targetMidAngle = targetIndex * sliceDeg + (sliceDeg / 2);
-    
     const spins = 5;
     const baseRotation = currentRotation % 360;
-    
+
     let additionalRotation = (180 - targetMidAngle - baseRotation) % 360;
     if (additionalRotation < 0) additionalRotation += 360;
-    
+
     const finalRotation = currentRotation + additionalRotation + (spins * 360);
-    
     const startRotation = currentRotation;
     const endRotation = finalRotation;
     const duration = 6000;
     const startTime = performance.now();
-    
+
     function animate(time) {
         let t = (time - startTime) / duration;
         if (t > 1) t = 1;
+
         const easeT = 1 - Math.pow(1 - t, 3);
         const nowRotation = startRotation + (endRotation - startRotation) * easeT;
-        
         drawWheel(nowRotation);
-        
+
         if (t < 1) {
             requestAnimationFrame(animate);
-        } else {
-            isSpinning = false;
-            wheelHasSpun = true;
-            currentRotation = nowRotation;
-            currentCategory = `${targetText} Category`;
-            
-            const overlay = document.getElementById('popupOverlay');
-            const popup = document.getElementById('popupObj');
-            const popupText = document.getElementById('popupText');
-            popupText.innerText = targetText;
-            overlay.classList.add('active');
-            popup.classList.add('show');
+            return;
         }
+
+        isSpinning = false;
+        wheelHasSpun = true;
+        currentRotation = nowRotation;
+        currentCategory = `${targetText} Category`;
+
+        const popupText = document.getElementById("popupText");
+        const popupOverlay = document.getElementById("popupOverlay");
+        const popupObj = document.getElementById("popupObj");
+
+        if (popupText) popupText.textContent = targetText;
+        if (popupOverlay) popupOverlay.classList.add("active");
+        if (popupObj) popupObj.classList.add("show");
     }
-    
+
     requestAnimationFrame(animate);
 }
 
-// ==================== QR CODE ====================
-function generateVoteQR(teamName, round) {
-    try {
-        const qrImg = document.getElementById('qrImage');
-        const url = new URL('/vote.html', window.location.origin);
-        url.searchParams.set('phase', 'open');
-        url.searchParams.set('team', teamName);
-        url.searchParams.set('round', String(round));
-        url.searchParams.set('category', currentCategory);
-        const encodedUrl = encodeURIComponent(url.toString());
-        // Using an external API to ensure it always correctly displays
-        qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodedUrl}&color=1a1025&bgcolor=ffffff`;
-    } catch (e) {
-        console.error('QR Error:', e);
-    }
+function generateVoteQR(round) {
+    const qrImg = document.getElementById("qrImage");
+    if (!qrImg) return;
+
+    const formUrl = ROUND_FORM_URLS[round] || ROUND_FORM_URLS[1];
+    const encodedUrl = encodeURIComponent(formUrl);
+    qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodedUrl}&color=5c1d91&bgcolor=ffffff`;
 }
 
-function getJudgeVoteLink() {
-    const url = new URL('/vote.html', window.location.origin);
-    url.searchParams.set('mode', 'judge');
-    url.searchParams.set('judges', String(DEFAULT_JUDGE_COUNT));
-    return url.toString();
+function showTeam(teamKey) {
+    const team = TEAMS[teamKey];
+    if (!team) return;
+
+    currentTeamKey = teamKey;
+    const teamLogo = ensureTeamScreen();
+    teamLogo.src = team.logo;
+    teamLogo.alt = `${team.name} logo`;
+    showScreen("team");
 }
 
-async function fetchVoteRows() {
-    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return [];
-    try {
-        const response = await fetch(`${SUPABASE_URL}/rest/v1/votes?select=${encodeURIComponent(VOTES_SELECT)}`, {
-            headers: {
-                apikey: SUPABASE_ANON_KEY,
-                Authorization: `Bearer ${SUPABASE_ANON_KEY}`
-            }
-        });
-        if (!response.ok) {
-            throw new Error(`Vote fetch failed with ${response.status}`);
-        }
-        return await response.json();
-    } catch (error) {
-        console.error('Vote fetch failed', error);
-        return null;
-    }
-}
+function showVoteScreen(round = currentRound, options = {}) {
+    const { trackPerformance = true } = options;
+    const resolvedTeamKey = currentTeamKey || DEFAULT_TEAM_KEY;
+    const team = TEAMS[resolvedTeamKey];
+    const voteUi = ensureVoteScreen();
 
-function formatScore(value) {
-    return Number.isFinite(value) ? value.toFixed(2) : '0.00';
-}
-
-function averageCategory(votes, category) {
-    if (!votes.length) return 0;
-    const total = votes.reduce((sum, vote) => sum + (Number(vote[category]) || 0), 0);
-    return total / votes.length;
-}
-
-function judgeContribution(votes, category, judgeCount) {
-    if (!votes.length || !judgeCount) return 0;
-    const total = votes.reduce((sum, vote) => sum + (Number(vote[category]) || 0), 0);
-    return total / judgeCount;
-}
-
-function calculateWeightedScores(votes) {
-    const grouped = {};
-
-    TEAM_NAMES.forEach((name) => {
-        for (let round = 1; round <= maxRounds; round++) {
-            grouped[`${round}|${name}`] = {
-                team: name,
-                round,
-                audienceVotes: [],
-                judgeVotes: [],
-                judgeCount: DEFAULT_JUDGE_COUNT
-            };
-        }
-    });
-
-    (votes || []).forEach((vote) => {
-        const key = `${vote.round}|${vote.team}`;
-        if (!grouped[key]) {
-            grouped[key] = {
-                team: vote.team,
-                round: vote.round,
-                audienceVotes: [],
-                judgeVotes: [],
-                judgeCount: DEFAULT_JUDGE_COUNT
-            };
-        }
-
-        const normalizedVote = {
-            enjoyability: Number(vote.enjoyability) || 0,
-            vocalQuality: Number(vote.vocal_quality) || 0,
-            performanceQuality: Number(vote.performance_quality) || 0
-        };
-
-        if (vote.vote_mode === 'judge') {
-            grouped[key].judgeVotes.push(normalizedVote);
-            grouped[key].judgeCount = Math.max(grouped[key].judgeCount, Number(vote.judge_count) || DEFAULT_JUDGE_COUNT);
-        } else {
-            grouped[key].audienceVotes.push(normalizedVote);
-        }
-    });
-
-    return grouped;
-}
-
-// ==================== SCORES DASHBOARD ====================
-function renderScores() {
-    const grid = document.getElementById('scoresGrid');
-    grid.innerHTML = '';
-    
-    for (let r = 1; r <= maxRounds; r++) {
-        const block = document.createElement('div');
-        block.className = 'round-scores-block';
-        
-        block.innerHTML = `
-            <h3>ROUND ${r}</h3>
-            <table class="scores-table">
-                <thead>
-                    <tr>
-                        <th>Team</th>
-                        <th>🎵 Enjoyability</th>
-                        <th>🎤 Vocal Quality</th>
-                        <th>🎭 Performance</th>
-                        <th>Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${TEAM_NAMES.map(name => {
-                        const s = scores[name][r];
-                        const total = s.enjoyability + s.vocalQuality + s.performanceQuality;
-                        return `
-                        <tr>
-                            <td>${name}</td>
-                            <td><input type="number" min="0" max="10" value="${s.enjoyability}" 
-                                data-team="${name}" data-round="${r}" data-cat="enjoyability"></td>
-                            <td><input type="number" min="0" max="10" value="${s.vocalQuality}" 
-                                data-team="${name}" data-round="${r}" data-cat="vocalQuality"></td>
-                            <td><input type="number" min="0" max="10" value="${s.performanceQuality}" 
-                                data-team="${name}" data-round="${r}" data-cat="performanceQuality"></td>
-                            <td class="total-cell" id="total-${name.replace(/\s/g,'_')}-${r}">${total}</td>
-                        </tr>`;
-                    }).join('')}
-                </tbody>
-            </table>
-        `;
-        
-        grid.appendChild(block);
-    }
-    
-    // Attach input listeners
-    grid.querySelectorAll('input').forEach(inp => {
-        inp.addEventListener('input', (e) => {
-            const team = e.target.dataset.team;
-            const round = parseInt(e.target.dataset.round);
-            const cat = e.target.dataset.cat;
-            let val = parseInt(e.target.value) || 0;
-            if (val > 10) val = 10;
-            if (val < 0) val = 0;
-            e.target.value = val;
-            scores[team][round][cat] = val;
-            
-            const s = scores[team][round];
-            const total = s.enjoyability + s.vocalQuality + s.performanceQuality;
-            document.getElementById(`total-${team.replace(/\s/g,'_')}-${round}`).textContent = total;
-        });
-        
-        // Prevent keyboard navigation from triggering screen changes
-        inp.addEventListener('keydown', (e) => {
-            e.stopPropagation();
-        });
-    });
-}
-
-async function renderScoresLive() {
-    const grid = document.getElementById('scoresGrid');
-    grid.innerHTML = '<div class="round-scores-block"><h3>Loading live scores...</h3></div>';
-
-    const votes = await fetchVoteRows();
-    if (votes === null) {
-        grid.innerHTML = '<div class="round-scores-block"><h3>Live scores unavailable</h3><p class="scores-empty">Set up the Supabase `votes` table and policies to see live results here.</p></div>';
+    if (!team || !voteUi.teamLabel || !voteUi.roundLabel || !voteUi.categoryLabel || !voteUi.qrLink) {
         return;
     }
 
-    const groupedScores = calculateWeightedScores(votes);
-    grid.innerHTML = '';
+    currentTeamKey = resolvedTeamKey;
+    currentRound = round;
+    updateRoundIndicator();
 
-    for (let r = 1; r <= maxRounds; r++) {
-        const block = document.createElement('div');
-        block.className = 'round-scores-block';
+    voteUi.teamLabel.textContent = team.name;
+    voteUi.roundLabel.textContent = `Round ${round}`;
+    voteUi.categoryLabel.textContent = currentCategory.toUpperCase();
+    voteUi.qrLink.textContent = displayUrl(ROUND_FORM_URLS[round]);
 
-        block.innerHTML = `
-            <h3>ROUND ${r}</h3>
-            <p class="scores-empty">Audience votes contribute 50%. Judges contribute 50% split across ${DEFAULT_JUDGE_COUNT} judges.</p>
-            <table class="scores-table">
-                <thead>
-                    <tr>
-                        <th>Team</th>
-                        <th>Enjoyability</th>
-                        <th>Vocal Quality</th>
-                        <th>Performance</th>
-                        <th>Weighted Total</th>
-                        <th>Audience</th>
-                        <th>Judges</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${TEAM_NAMES.map((name) => {
-                        const group = groupedScores[`${r}|${name}`];
-                        const weightedEnjoyability = (averageCategory(group.audienceVotes, 'enjoyability') * 0.5) + (judgeContribution(group.judgeVotes, 'enjoyability', group.judgeCount) * 0.5);
-                        const weightedVocal = (averageCategory(group.audienceVotes, 'vocalQuality') * 0.5) + (judgeContribution(group.judgeVotes, 'vocalQuality', group.judgeCount) * 0.5);
-                        const weightedPerformance = (averageCategory(group.audienceVotes, 'performanceQuality') * 0.5) + (judgeContribution(group.judgeVotes, 'performanceQuality', group.judgeCount) * 0.5);
-                        const total = weightedEnjoyability + weightedVocal + weightedPerformance;
-                        return `
-                        <tr>
-                            <td>${name}</td>
-                            <td>${formatScore(weightedEnjoyability)}</td>
-                            <td>${formatScore(weightedVocal)}</td>
-                            <td>${formatScore(weightedPerformance)}</td>
-                            <td class="total-cell">${formatScore(total)}</td>
-                            <td class="score-count-cell">${group.audienceVotes.length}</td>
-                            <td class="score-count-cell">${group.judgeVotes.length}/${group.judgeCount}</td>
-                        </tr>`;
-                    }).join('')}
-                </tbody>
-            </table>
-        `;
+    generateVoteQR(round);
+    showScreen("vote");
 
-        grid.appendChild(block);
+    if (trackPerformance) {
+        performedTeams.add(currentTeamKey);
     }
 }
 
-// ==================== NAVIGATION STATE MACHINE ====================
-function showTeam(teamKey) {
-    currentTeamKey = teamKey;
-    const teamName = TEAMS[teamKey];
-    document.getElementById('teamName').textContent = teamName;
-    const phase = performedTeams.size === 0 ? 'before' : 'between';
-    updateLiveState(teamName, currentRound, false, {
-        phase,
-        category: currentCategory,
-        event_complete: false
-    });
-    showScreen('team');
+function showWheelForRound(round) {
+    currentRound = round;
+    isSpinning = false;
+    wheelHasSpun = false;
+    performedTeams = new Set();
+    hidePopup();
+    updateRoundIndicator();
+    showScreen("wheel");
+    initWheel();
+    drawWheel(currentRotation);
 }
 
-function showVoteScreen() {
-    if (!currentTeamKey) return;
-    const teamName = TEAMS[currentTeamKey];
-    document.getElementById('voteTeamLabel').textContent = teamName;
-    document.getElementById('voteRoundLabel').textContent = `ROUND ${currentRound}`;
-    const voteCategoryLabel = document.getElementById('voteCategoryLabel');
-    if (voteCategoryLabel) {
-        voteCategoryLabel.textContent = currentCategory.toUpperCase();
-    }
-    generateVoteQR(teamName, currentRound);
-    showScreen('vote');
-    performedTeams.add(currentTeamKey);
-    updateLiveState(teamName, currentRound, true, {
-        phase: 'open',
-        category: currentCategory,
-        event_complete: false
-    });
+function showVoteForRound(round) {
+    currentRound = round;
+    showVoteScreen(round, { trackPerformance: false });
 }
 
 function showRoundTransition() {
-    currentRound++;
-    if (currentRound > maxRounds) {
-        // Show final scores
-        updateLiveState("", maxRounds, false, {
-            phase: 'complete',
-            category: currentCategory,
-            event_complete: true
-        });
-        renderScoresLive();
-        showScreen('scores');
+    currentRound += 1;
+
+    if (currentRound > MAX_ROUNDS) {
+        currentRound = 1;
+        performedTeams = new Set();
+        wheelHasSpun = false;
+        currentCategory = DEFAULT_CATEGORY;
+        shuffleRiggedTargets();
+        showScreen("title");
         return;
     }
-    updateLiveState("", currentRound, false, {
-        phase: 'between',
-        category: currentCategory,
-        event_complete: false
-    });
-    document.getElementById('roundTransitionText').textContent = `ROUND ${currentRound}`;
-    showScreen('round-transition');
-    performedTeams.clear();
+
+    performedTeams = new Set();
     wheelHasSpun = false;
+    document.getElementById("roundTransitionText").textContent = `Round ${currentRound}`;
+    showScreen("round-transition");
 }
 
-// ==================== KEYBOARD HANDLER ====================
-document.addEventListener('keydown', (e) => {
-    // Don't handle if user is typing in an input
-    if (e.target.tagName === 'INPUT') return;
-    
-    const key = e.key.toLowerCase();
-    
+document.addEventListener("keydown", (event) => {
+    if (event.target.tagName === "INPUT") return;
+
+    const key = (event.key || "").toLowerCase();
+    const teamKey = getTeamKey(event);
+    const wheelRound = getWheelShortcutRound(event);
+    const voteRound = getVoteShortcutRound(event);
+
+    if (wheelRound) {
+        event.preventDefault();
+        showWheelForRound(wheelRound);
+        return;
+    }
+
+    if (voteRound) {
+        event.preventDefault();
+        showVoteForRound(voteRound);
+        return;
+    }
+
     switch (currentScreen) {
-        case 'title':
-            if (key === ' ') {
-                e.preventDefault();
-                document.getElementById('roundIndicator').textContent = `ROUND ${currentRound}`;
-                showScreen('wheel');
-                initWheel();
-                document.fonts.ready.then(() => drawWheel(currentRotation));
+        case "title":
+            if (isSpaceKey(event)) {
+                event.preventDefault();
+                showWheelForRound(currentRound);
             }
             break;
-            
-        case 'wheel':
-            if (key === ' ' && !isSpinning && !wheelHasSpun) {
-                e.preventDefault();
+
+        case "wheel":
+            if (isSpaceKey(event) && !isSpinning && !wheelHasSpun) {
+                event.preventDefault();
                 spinWheel();
             }
-            // Team keys work after wheel has spun
-            if (TEAM_KEYS.includes(key) && wheelHasSpun && !isSpinning) {
-                document.getElementById('popupOverlay').classList.remove('active');
-                document.getElementById('popupObj').classList.remove('show');
-                showTeam(key);
+
+            if (teamKey && wheelHasSpun && !isSpinning) {
+                event.preventDefault();
+                hidePopup();
+                showTeam(teamKey);
             }
-            if (key === 'escape') {
-                previousScreen = 'wheel';
-                renderScoresLive();
-                showScreen('scores');
-            }
-            break;
-            
-        case 'team':
-            if (TEAM_KEYS.includes(key)) {
-                // If we mispressed, allow changing the team without advancing flow
-                showTeam(key);
-            }
-            if (key === ' ') {
-                e.preventDefault();
-                showVoteScreen();
-            }
-            if (key === 'escape') {
-                previousScreen = 'team';
-                renderScoresLive();
-                showScreen('scores');
+
+            if (key === "escape") {
+                showScreen("title");
             }
             break;
-            
-        case 'vote':
-            // Team keys for next group
-            if (TEAM_KEYS.includes(key)) {
-                // Determine if we are moving to next team or if this was just a mispress fixing
-                if (performedTeams.size < 5) {
-                    showTeam(key);
-                }
+
+        case "team":
+            if (teamKey) {
+                event.preventDefault();
+                showTeam(teamKey);
             }
-            if (key === ' ') {
-                e.preventDefault();
-                // Only move to round transition if all 5 teams have voted
-                if (performedTeams.size >= 5) {
-                    showRoundTransition();
-                }
+
+            if (isSpaceKey(event)) {
+                event.preventDefault();
+                showVoteScreen(currentRound, { trackPerformance: true });
             }
-            if (key === 'escape') {
-                previousScreen = 'vote';
-                updateLiveState("", currentRound, false, {
-                    phase: 'between',
-                    category: currentCategory,
-                    event_complete: false
-                });
-                renderScoresLive();
-                showScreen('scores');
+
+            if (key === "escape") {
+                showScreen("wheel");
             }
             break;
-            
-        case 'scores':
-            if (key === ' ' || key === 'escape') {
-                e.preventDefault();
-                // Return to previous context
-                if (previousScreen) {
-                    // Restore live state if returning to vote
-                    if (previousScreen === 'vote') {
-                        updateLiveState(TEAMS[currentTeamKey], currentRound, true, {
-                            phase: 'open',
-                            category: currentCategory,
-                            event_complete: false
-                        });
-                    }
-                    // If we completed a round, go to round transition
-                    if (performedTeams.size >= 5) {
-                        showRoundTransition();
-                    } else {
-                        showScreen(previousScreen);
-                    }
-                } else {
-                    showScreen('wheel');
-                }
+
+        case "vote":
+            if (teamKey && performedTeams.size < 5) {
+                event.preventDefault();
+                showTeam(teamKey);
+            }
+
+            if (isSpaceKey(event) && performedTeams.size >= 5) {
+                event.preventDefault();
+                showRoundTransition();
+            }
+
+            if (key === "escape") {
+                showTeam(currentTeamKey);
             }
             break;
-            
-        case 'round-transition':
-            if (key === ' ') {
-                e.preventDefault();
-                document.getElementById('roundIndicator').textContent = `ROUND ${currentRound}`;
-                wheelHasSpun = false;
-                showScreen('wheel');
-                initWheel();
-                drawWheel(currentRotation);
+
+        case "round-transition":
+            if (isSpaceKey(event)) {
+                event.preventDefault();
+                showWheelForRound(currentRound);
+            }
+
+            if (key === "escape") {
+                showScreen("title");
             }
             break;
     }
 });
 
-
-
-document.getElementById('popupOverlay').addEventListener('click', () => {
-    // Don't close, just let team keys work
-});
-
-// ==================== INIT ====================
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener("DOMContentLoaded", () => {
+    ensureTeamScreen();
+    ensureVoteScreen();
     createSparkles();
-    showScreen('title');
-    window.getJudgeVoteLink = getJudgeVoteLink;
-    console.info('Judge live voting link:', getJudgeVoteLink());
-    updateLiveState("", currentRound, false, {
-        phase: 'before',
-        category: currentCategory,
-        event_complete: false
-    });
-    setInterval(() => {
-        if (currentScreen === 'scores') {
-            renderScoresLive();
-        }
-    }, 3000);
+    updateRoundIndicator();
+    showScreen("title");
+
+    const popupOverlay = document.getElementById("popupOverlay");
+    if (popupOverlay) {
+        popupOverlay.addEventListener("click", () => {
+            // Leave the selected category visible until the operator advances.
+        });
+    }
 });
