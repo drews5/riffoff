@@ -146,6 +146,10 @@ function getVoteShortcutRound(event) {
     return VOTE_SHORTCUTS[event.code] || null;
 }
 
+function isFinaleShortcut(event) {
+    return (event.key || "").toLowerCase() === "x" || event.code === "KeyX";
+}
+
 function hidePopup() {
     const overlay = document.getElementById("popupOverlay");
     const popup = document.getElementById("popupObj");
@@ -583,6 +587,12 @@ document.addEventListener("keydown", (event) => {
     const teamKey = getTeamKey(event);
     const wheelRound = getWheelShortcutRound(event);
     const voteRound = getVoteShortcutRound(event);
+
+    if (isFinaleShortcut(event)) {
+        event.preventDefault();
+        showScreen("finale");
+        return;
+    }
 
     if (wheelRound) {
         event.preventDefault();
