@@ -527,6 +527,7 @@ function showVoteScreen(round = currentRound, options = {}) {
     updateRoundIndicator();
 
     voteUi.teamLabel.textContent = team.name;
+    voteUi.teamLabel.classList.toggle("vote-team-label--compact", team.name.length >= 16);
     voteUi.roundLabel.textContent = `Round ${round}`;
     voteUi.categoryLabel.textContent = currentCategory.toUpperCase();
     voteUi.qrLink.textContent = displayUrl(ROUND_FORM_URLS[round]);
@@ -565,7 +566,7 @@ function showRoundTransition() {
         wheelHasSpun = false;
         currentCategory = DEFAULT_CATEGORY;
         shuffleRiggedTargets();
-        showScreen("title");
+        showScreen("finale");
         return;
     }
 
@@ -659,6 +660,13 @@ document.addEventListener("keydown", (event) => {
             }
 
             if (key === "escape") {
+                showScreen("title");
+            }
+            break;
+
+        case "finale":
+            if (isSpaceKey(event) || key === "escape") {
+                event.preventDefault();
                 showScreen("title");
             }
             break;
