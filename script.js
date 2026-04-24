@@ -60,6 +60,121 @@ function displayUrl(url) {
     return url.replace(/^https?:\/\//, "");
 }
 
+function getAudioContext() {
+    if (audioContext) return audioContext;
+
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return null;
+
+    audioContext = new AudioContextClass();
+    return audioContext;
+}
+
+function resumeAudioContext() {
+    const context = getAudioContext();
+    if (context && context.state === "suspended") {
+        context.resume().catch(() => {});
+    }
+    return context;
+}
+
+function playSpinTick() {
+    const context = resumeAudioContext();
+    if (!context) return;
+
+    const now = context.currentTime;
+    const oscillator = context.createOscillator();
+    const filter = context.createBiquadFilter();
+    const gainNode = context.createGain();
+
+    oscillator.type = "square";
+    oscillator.frequency.setValueAtTime(1320, now);
+    oscillator.frequency.exponentialRampToValueAtTime(980, now + 0.045);
+
+    filter.type = "bandpass";
+    filter.frequency.setValueAtTime(1600, now);
+    filter.Q.setValueAtTime(6, now);
+
+    gainNode.gain.setValueAtTime(0.0001, now);
+    gainNode.gain.exponentialRampToValueAtTime(0.08, now + 0.003);
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.05);
+
+    oscillator.connect(filter);
+    filter.connect(gainNode);
+    gainNode.connect(context.destination);
+
+    oscillator.start(now);
+    oscillator.stop(now + 0.06);
+}
+
+function playDing() {
+    const context = resumeAudioContext();
+    if (!context) return;
+
+    const now = context.currentTime;
+    const fundamental = context.createOscillator();
+    const shimmer = context.createOscillator();
+    const gainNode = context.createGain();
+
+    fundamental.type = "sine";
+    fundamental.frequency.setValueAtTime(1174.66, now);
+    fundamental.frequency.exponentialRampToValueAtTime(1567.98, now + 0.22);
+
+    shimmer.type = "triangle";
+    shimmer.frequency.setValueAtTime(1567.98, now);
+    shimmer.frequency.exponentialRampToValueAtTime(2349.32, now + 0.22);
+
+    gainNode.gain.setValueAtTime(0.0001, now);
+    gainNode.gain.exponentialRampToValueAtTime(0.16, now + 0.02);
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 1.1);
+
+    fundamental.connect(gainNode);
+    shimmer.connect(gainNode);
+    gainNode.connect(context.destination);
+
+    fundamental.start(now);
+    shimmer.start(now);
+    fundamental.stop(now + 1.15);
+    shimmer.stop(now + 1.15);
+}
+
+function stopSpinSound() {
+    if (spinSoundTimeoutId) {
+        window.clearTimeout(spinSoundTimeoutId);
+        spinSoundTimeoutId = null;
+    }
+}
+
+function startSpinSound(durationMs, sessionId) {
+    stopSpinSound();
+    resumeAudioContext();
+
+    const startedAt = performance.now();
+
+    function queueTick() {
+        if (!isSpinning || sessionId !== spinSessionId) {
+            stopSpinSound();
+            return;
+        }
+
+        const elapsed = performance.now() - startedAt;
+        const progress = Math.min(elapsed / durationMs, 1);
+        const delay = 36 + (progress * 150);
+
+        playSpinTick();
+        spinSoundTimeoutId = window.setTimeout(queueTick, delay);
+    }
+
+    queueTick();
+}
+
+function cancelActiveSpin() {
+    spinSessionId += 1;
+    isSpinning = false;
+    stopSpinSound();
+    hidePopup();
+}
+
 let currentScreen = "title";
 let currentRound = 1;
 let currentTeamKey = DEFAULT_TEAM_KEY;
@@ -67,6 +182,9 @@ let currentCategory = DEFAULT_CATEGORY;
 let performedTeams = new Set();
 let isSpinning = false;
 let wheelHasSpun = false;
+let spinSessionId = 0;
+let spinSoundTimeoutId = null;
+let audioContext = null;
 
 const W = 800;
 const H = 800;
@@ -440,8 +558,9 @@ function drawWheel(rotationDeg = 0) {
 function spinWheel() {
     if (isSpinning) return;
 
-    hidePopup();
+    cancelActiveSpin();
     isSpinning = true;
+    const sessionId = ++spinSessionId;
 
     let targetText;
     if (riggedTargets.length > 0) {
@@ -466,7 +585,13 @@ function spinWheel() {
     const duration = 6000;
     const startTime = performance.now();
 
+    startSpinSound(duration, sessionId);
+
     function animate(time) {
+        if (sessionId !== spinSessionId) {
+            return;
+        }
+
         let t = (time - startTime) / duration;
         if (t > 1) t = 1;
 
@@ -480,6 +605,7 @@ function spinWheel() {
         }
 
         isSpinning = false;
+        stopSpinSound();
         wheelHasSpun = true;
         currentRotation = nowRotation;
         currentCategory = `${targetText} Category`;
@@ -491,6 +617,7 @@ function spinWheel() {
         if (popupText) popupText.textContent = targetText;
         if (popupOverlay) popupOverlay.classList.add("active");
         if (popupObj) popupObj.classList.add("show");
+        playDing();
     }
 
     requestAnimationFrame(animate);
@@ -545,11 +672,10 @@ function showVoteScreen(round = currentRound, options = {}) {
 }
 
 function showWheelForRound(round) {
+    cancelActiveSpin();
     currentRound = round;
-    isSpinning = false;
     wheelHasSpun = false;
     performedTeams = new Set();
-    hidePopup();
     updateRoundIndicator();
     showScreen("wheel");
     initWheel();
@@ -557,11 +683,13 @@ function showWheelForRound(round) {
 }
 
 function showVoteForRound(round) {
+    cancelActiveSpin();
     currentRound = round;
     showVoteScreen(round, { trackPerformance: false });
 }
 
 function showRoundTransition() {
+    cancelActiveSpin();
     currentRound += 1;
 
     if (currentRound > MAX_ROUNDS) {
@@ -590,6 +718,7 @@ document.addEventListener("keydown", (event) => {
 
     if (isFinaleShortcut(event)) {
         event.preventDefault();
+        cancelActiveSpin();
         showScreen("finale");
         return;
     }
